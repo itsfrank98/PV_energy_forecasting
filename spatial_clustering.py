@@ -6,7 +6,7 @@ from pyclustering.cluster.kmedoids import kmedoids
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from pyclustering.cluster.elbow import elbow
 import matplotlib.pyplot as plt
-import pickle
+from utils import save_to_pickle
 
 d = {}
 for row in arff.load('Fumagalli 8fold CV/train_2019.arff'):
@@ -23,23 +23,26 @@ for i in range(len(d.keys())):
         if i != j:
             distance_mat[i, j] = math.dist(d[keys_list[i]], d[keys_list[j]])
 
-n_clusters = np.arange(1, 10) + 1
+n_clusters = 5
 inertias = []
-for n in n_clusters:
-    clustering = KMedoids(n_clusters=n, random_state=0, metric='precomputed').fit(distance_mat)
-    lab = list(clustering.labels_)
-    d ={l+1: lab.count(l) for l in set(lab)}
-    pickle.dump(clustering, open("{}.pkl".format(n), 'wb'))
-    inertias.append(clustering.inertia_)
+clustering = KMedoids(n_clusters=n_clusters, random_state=0, metric='precomputed').fit(distance_mat)
+lab = list(clustering.labels_)
+d = {l+1: lab.count(l) for l in set(lab)}
+
+save_to_pickle("spatial_adj_matrix.pkl", distance_mat)
+save_to_pickle("{}.pkl".format(n_clusters), clustering)
+print(d)
+inertias.append(clustering.inertia_)
 
 # Plot inertia for each k in order to find the best number of clusters with the elbow method
-figure = plt.figure(1)
-ax = figure.add_subplot(111)
-ax.plot(range(1, len(n_clusters)+1), inertias, color='b', marker='.')
-ax.grid(True)
-plt.ylabel("Inertia")
-plt.xlabel("K")
-plt.show()
+def plot_inertia(n_clusters, inertias):
+    figure = plt.figure(1)
+    ax = figure.add_subplot(111)
+    ax.plot(range(1, len(n_clusters)+1), inertias, color='b', marker='.')
+    ax.grid(True)
+    plt.ylabel("Inertia")
+    plt.xlabel("K")
+    plt.show()
 
 def pyclustering_clustering():
     kmin, kmax = 1, 10
@@ -66,3 +69,5 @@ def pyclustering_clustering():
     plt.ylabel("WCE")
     plt.xlabel("K")
     plt.show()
+
+

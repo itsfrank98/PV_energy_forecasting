@@ -1,9 +1,8 @@
 import arff
 from dtaidistance import dtw
 import numpy as np
-from sklearn_extra.cluster import KMedoids
+import os
 from sklearn.cluster import AgglomerativeClustering
-import matplotlib.pyplot as plt
 import pickle
 from tqdm import tqdm
 
@@ -38,22 +37,20 @@ def create_distance_matrix(d):
 with open("dictionary_dtw.pkl", 'rb') as f:
     d = pickle.load(f)
 # create_distance_matrix(d)
-
-with open("dtw_matrices/distance_matrix_96.pkl", 'rb') as f:
-    distance_mat = pickle.load(f)
-
-n_clusters = np.arange(15,30)
-inertias = []
-for n in n_clusters:
-    clustering = AgglomerativeClustering(n_clusters=n, affinity='precomputed', linkage="single").fit(distance_mat)
-    lab = list(clustering.labels_)
-    d_foo ={l+1: lab.count(l) for l in set(lab)}
-    inertias.append(clustering.)
-
-figure = plt.figure(1)
-ax = figure.add_subplot(111)
-ax.plot(n_clusters, inertias, color='b', marker='.')
-ax.grid(True)
-plt.ylabel("Inertia")
-plt.xlabel("K")
-plt.show()
+linkage="average"      # Complete linkage was found to be the best one among the four alternatives
+matrices_directory = "dtw_matrices"
+d_months2clusters = {   # This dictionary stores the number of clusters to create depending on how many months we consider
+    '6': 8,
+    '12': 6,
+    '36': 5,
+    '72': 6,
+    '96': 6
+}
+for f in os.listdir(matrices_directory):
+    number_of_months = f.split('_')[-1].split('.')[0]
+    with open(os.path.join(matrices_directory, f), 'rb') as f:
+        distance_mat = pickle.load(f)
+        n_clusters = d_months2clusters[number_of_months]
+        clustering_model = AgglomerativeClustering(n_clusters=n_clusters, affinity='precomputed', linkage=linkage)
+        clustering_model.fit(distance_mat)
+        pickle.dump(clustering_model, open("temporal_clustering/{}months_{}.pkl".format(number_of_months, n_clusters), 'wb'))
