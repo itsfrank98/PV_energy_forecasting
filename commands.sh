@@ -1,3 +1,4 @@
+#!/bin/bash
 python merge_clusterings.py --spatial_path 7complete.pkl --spatial_dist_mat spatial_adj_matrix.pkl --temporal_path temporal_clustering/clusters/96months_6.pkl --temporal_dist_mat dtw_matrices/distance_matrix_96.pkl --technique silhouette --dst spatio_temporal_clustering/matrices/sil_complete/
 python merge_clusterings.py --spatial_path 7complete.pkl --spatial_dist_mat spatial_adj_matrix.pkl --temporal_path temporal_clustering/clusters/36months_5.pkl --temporal_dist_mat dtw_matrices/distance_matrix_36.pkl --technique silhouette --dst spatio_temporal_clustering/matrices/sil_complete/
 python merge_clusterings.py --spatial_path 7complete.pkl --spatial_dist_mat spatial_adj_matrix.pkl --temporal_path temporal_clustering/clusters/6months_8.pkl --temporal_dist_mat dtw_matrices/distance_matrix_6.pkl --technique silhouette --dst spatio_temporal_clustering/matrices/sil_complete/
