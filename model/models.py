@@ -7,7 +7,7 @@ from keras.metrics import RootMeanSquaredError
 from keras.optimizers import Adam
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from utils import create_lstm_tensors
+from utils import create_lstm_tensors, create_lstm_tensors_minmax
 import pandas as pd
 import tensorflow as tf
 import os
@@ -30,6 +30,22 @@ def create_single_target_model(neurons, dropout, x_train, lr):
     m.compile(loss='mean_squared_error', optimizer=Adam(learning_rate=lr), metrics=[RootMeanSquaredError(), 'mae'])
     return m
 
+def create_multitarget_model(neurons, dropout, x_train, ids, lr):
+    input = Input(shape=(10,1))
+    # x_train.shape[1], x_train.shape[2]
+    output_layers = []
+    losses = ['mean_squared_error'] * len(ids)
+    metrics = [RootMeanSquaredError(), 'mae'] * len(ids)
+    loss_weights = [1.0] * len(ids)
+    for id in ids:
+        n = LSTM(units=neurons)(input)
+        n = Dropout(dropout)(n)
+        n = Dense(units=neurons, activation='relu', name='ReLu_{}'.format(id))(n)
+        n = Dense(units=1, activation='relu', name='output_{}'.format(id))(n)
+        output_layers.append(n)
+    m = Model(inputs=input, outputs=output_layers)
+    m.compile(loss=losses, optimizer=Adam(learning_rate=lr), loss_weights=loss_weights, metrics=metrics)
+    print(m.summary())
 
 def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, batch_size, x_train, y_train, lr):
     if not os.path.isdir(os.path.join(model_folder)):
@@ -48,15 +64,15 @@ def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, b
     #model.add(Dense(units=1, activation='relu', name='output'))'''
 
     history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.002, verbose=0,
-                        shuffle=False, callbacks=callbacks)
+                        shuffle=False)
     return model, history
 
 
 if __name__ == "__main__":
-    train_dir = "single_target_datasets/train"
-    test_dir = "single_target_datasets/test"
+    train_dir = "single_datasets/train"
+    test_dir = "single_datasets/test"
 
-    with open("single_target_results.txt", 'w') as f:
+    with open("single_target_results_minmax_scaled.txt.txt", 'w') as f:
         f.write("      MAE    RMSE\n")
         f.close()
     for f in tqdm(sorted(os.listdir(train_dir))):
@@ -66,10 +82,17 @@ if __name__ == "__main__":
         train = pd.read_csv(os.path.join(train_dir, f))
         test = pd.read_csv(os.path.join(test_dir, f))
 
-        scaler = MinMaxScaler(feature_range=(0, 1))
-        x_train, y_train = create_lstm_tensors(train, scaler, '12')
-        x_test, y_test = create_lstm_tensors(test, scaler, '12')
+        #scaler = MinMaxScaler(feature_range=(0, 1))
+        x_train, y_train, scaler = create_lstm_tensors_minmax(train, None)
+        x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler)
+        x_test[x_test<0] = 0
+        x_test[x_test>1] = 1
+        y_test[y_test<0] = 0
+        y_test[y_test>1] = 1
+        print(np.count_nonzero(x_test<0)+np.count_nonzero(y_test<0)+np.count_nonzero(x_test>1)+np.count_nonzero(y_test>1))
 
+        '''x_train, y_train  = create_lstm_tensors(train, '12')
+        x_test, y_test = create_lstm(test, '12', max)'''
         neurons = 12
         dropout = 0.3
         lr = 0.005
