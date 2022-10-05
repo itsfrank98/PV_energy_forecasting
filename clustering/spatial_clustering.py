@@ -24,7 +24,8 @@ def create_distance_matrix(dst_path, src='Fumagalli 8fold CV/train_2019.arff'):
         for j in range(len(d.keys())):
             if i != j:
                 distance_mat[i, j] = math.dist(d[keys_list[i]], d[keys_list[j]])
-    save_to_pickle(dst_path, distance_mat)
+    #save_to_pickle('spatial_clustering/plant_coordinates_dictionary.pkl', d)
+    #save_to_pickle(dst_path, distance_mat)
 
 # Plot inertia for each k in order to find the best number of clusters with the elbow method
 def plot_inertia(n_clusters, inertias):
@@ -63,15 +64,29 @@ def plot_inertia(n_clusters, inertias):
     plt.show()'''
 
 
-def main(n_clusters, distance_mat_path, linkage="average"):
+def main(n_clusters, distance_mat_path, linkage="average", load=True):
+    if not load:
+        create_distance_matrix(distance_mat_path, '../Fumagalli 8fold CV/train_2019.arff')
     distance_mat = load_from_pickle(distance_mat_path)
     clustering = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed", linkage=linkage)
-    #clustering = KMedoids(n_clusters=n, random_state=0, metric='precomputed')
+    #clustering = KMedoids(n_clusters=n_clusters, random_state=0, metric='precomputed')
     clustering.fit(distance_mat)
+
     lab = list(clustering.labels_)
+    labels_set = set(lab)
+    plant_coordinates_dict = load_from_pickle("spatial_clustering/plant_coordinates_dictionary")
+    ids = list(plant_coordinates_dict.keys())
+    clusters_dict = {}
+    for label in labels_set:
+        d = []
+        for i in range(len(lab)):
+            if lab[i] == label:
+                d.append(ids[i])
+        clusters_dict[label] = d
+
     save_to_pickle("spatial_clustering/{}.pkl".format(n_clusters), clustering)
-    d = {l+1: lab.count(l) for l in set(lab)}
+
     print(d)
 
 #n/2
-main(n_clusters=75, distance_mat_path="spatial_adj_matrix.pkl")
+main(n_clusters=75, distance_mat_path="spatial_clustering/distance_mat.pkl", load=True)
