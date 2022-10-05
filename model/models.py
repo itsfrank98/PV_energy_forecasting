@@ -71,8 +71,9 @@ def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, b
 if __name__ == "__main__":
     train_dir = "single_datasets/train"
     test_dir = "single_datasets/test"
+    file_name = "single_target_minmax.txt"
 
-    with open("single_target_results_minmax_scaled.txt.txt", 'w') as f:
+    with open(file_name, 'w') as f:
         f.write("      MAE    RMSE\n")
         f.close()
     for f in tqdm(sorted(os.listdir(train_dir))):
@@ -82,17 +83,15 @@ if __name__ == "__main__":
         train = pd.read_csv(os.path.join(train_dir, f))
         test = pd.read_csv(os.path.join(test_dir, f))
 
-        #scaler = MinMaxScaler(feature_range=(0, 1))
         x_train, y_train, scaler = create_lstm_tensors_minmax(train, None)
         x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler)
         x_test[x_test<0] = 0
         x_test[x_test>1] = 1
         y_test[y_test<0] = 0
         y_test[y_test>1] = 1
-        print(np.count_nonzero(x_test<0)+np.count_nonzero(y_test<0)+np.count_nonzero(x_test>1)+np.count_nonzero(y_test>1))
 
-        '''x_train, y_train  = create_lstm_tensors(train, '12')
-        x_test, y_test = create_lstm(test, '12', max)'''
+        '''x_train, y_train, max = create_lstm_tensors(train)
+        x_test, y_test, _ = create_lstm_tensors(test, max)'''
         neurons = 12
         dropout = 0.3
         lr = 0.005
@@ -105,5 +104,5 @@ if __name__ == "__main__":
         #inversed_y = scaler.inverse_transform(y_test)
         rmse = np.sqrt(mean_squared_error(y_true=y_test, y_pred=predictions))
         mae = mean_absolute_error(y_true=y_test, y_pred=predictions)
-        with open("single_target_results.txt", 'a') as f:
+        with open(file_name, 'a') as f:
             f.write("%s: %s  %s\n"%(id, mae, rmse))

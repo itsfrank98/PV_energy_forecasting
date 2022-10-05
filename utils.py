@@ -22,10 +22,10 @@ def absolute_scaler(x, max, testing=False):
         x = x/max
     return x
 
-def create_lstm_tensors(df, target_column, max=False):
-    months_columns = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11']     # Names of the columns containing the training data
-    x = df[months_columns].values
-    y = df[target_column].values
+def create_lstm_tensors(df, max=False):
+    # USELESS
+    data = df.values
+    x, y = data[:, 1:-1], data[:, -1]
     testing = True
     if not max:
         max_x = np.max(x)
@@ -38,9 +38,6 @@ def create_lstm_tensors(df, target_column, max=False):
 
     x = absolute_scaler(x, max, testing=testing)
     y = absolute_scaler(y, max, testing=testing)
-    '''x = scaler.fit_transform(x)
-    
-    y = scaler.fit_transform(y)'''
     x = x.reshape(x.shape[0], x.shape[1], 1)
     y = y.reshape(y.shape[0], 1)
 
