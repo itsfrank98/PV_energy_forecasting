@@ -7,7 +7,7 @@ from pyclustering.cluster.kmedoids import kmedoids
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from pyclustering.cluster.elbow import elbow
 import matplotlib.pyplot as plt
-from utils import save_to_pickle, load_from_pickle
+from utils import save_to_pickle, load_from_pickle, create_clusters_dict
 
 def create_distance_matrix(dst_path, src='Fumagalli 8fold CV/train_2019.arff'):
     d = {}
@@ -24,8 +24,8 @@ def create_distance_matrix(dst_path, src='Fumagalli 8fold CV/train_2019.arff'):
         for j in range(len(d.keys())):
             if i != j:
                 distance_mat[i, j] = math.dist(d[keys_list[i]], d[keys_list[j]])
-    #save_to_pickle('spatial_clustering/plant_coordinates_dictionary.pkl', d)
-    #save_to_pickle(dst_path, distance_mat)
+    save_to_pickle('spatial_clustering/plant_coordinates_dictionary.pkl', d)
+    save_to_pickle(dst_path, distance_mat)
 
 # Plot inertia for each k in order to find the best number of clusters with the elbow method
 def plot_inertia(n_clusters, inertias):
@@ -64,7 +64,7 @@ def plot_inertia(n_clusters, inertias):
     plt.show()'''
 
 
-def main(n_clusters, distance_mat_path, linkage="average", load=True):
+def main(n_clusters, distance_mat_path, clusters_dict_name, linkage="average", load=True):
     if not load:
         create_distance_matrix(distance_mat_path, '../Fumagalli 8fold CV/train_2019.arff')
     distance_mat = load_from_pickle(distance_mat_path)
@@ -73,20 +73,12 @@ def main(n_clusters, distance_mat_path, linkage="average", load=True):
     clustering.fit(distance_mat)
 
     lab = list(clustering.labels_)
-    labels_set = set(lab)
-    plant_coordinates_dict = load_from_pickle("spatial_clustering/plant_coordinates_dictionary")
+    plant_coordinates_dict = load_from_pickle("spatial_clustering/plant_coordinates_dictionary.pkl")
     ids = list(plant_coordinates_dict.keys())
-    clusters_dict = {}
-    for label in labels_set:
-        d = []
-        for i in range(len(lab)):
-            if lab[i] == label:
-                d.append(ids[i])
-        clusters_dict[label] = d
+    clusters_dict = create_clusters_dict(lab, ids)
 
     save_to_pickle("spatial_clustering/{}.pkl".format(n_clusters), clustering)
-
-    print(d)
+    save_to_pickle(clusters_dict_name, clusters_dict)
 
 #n/2
-main(n_clusters=75, distance_mat_path="spatial_clustering/distance_mat.pkl", load=True)
+main(n_clusters=75, distance_mat_path="spatial_clustering/distance_mat.pkl", clusters_dict_name="spatial_clustering/clusters_dict.pkl.pkl", load=True)
