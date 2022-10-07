@@ -1,7 +1,12 @@
+import sys
+sys.path.append('../')
+
 import arff
 import pandas as pd
 import os
 from utils import load_from_pickle
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
 
 def prepare_data_single_dataset(data_path, dst_folder):
     """
@@ -29,7 +34,7 @@ def prepare_data_single_dataset(data_path, dst_folder):
         l.append(row[-1])
         l_series.append(l)
 
-def create_set(path_to_dictionary, dataset_folder, dst_folder_path):
+def create_data_multi_target_dataset(path_to_dictionary, dataset_folder, dst_folder_path):
     """
     Groups together the series concerning the plants that were clustered together, and saves them in separate files
     :param path_to_dictionary: Path to the dictionary having as keys the cluster IDs and as values the list of IDs of
@@ -50,8 +55,56 @@ def create_set(path_to_dictionary, dataset_folder, dst_folder_path):
                 file_name += id.split('.')[0]+"_"
         df.to_csv(dst_folder_path+"/"+file_name[:-1]+".csv")       # We use file_name[:-1] to prevent it from ending in "_", which isn't aesthetic
 
-create_set("../clustering/spatial_clustering/clusters_dict.pkl", "single_datasets/train", "bo/train")
+
+def absolute_scaler(x, max, testing=False):
+    if testing:
+        for i in range(len(x)):
+            if i <= max:
+                x[i] /= max
+            else:
+                x[i] = 1
+    else:
+        x = x/max
+    return x
+
+def create_lstm_tensors(df, max=False):
+    # USELESS
+    data = df.values
+    x, y = data[:, 1:-1], data[:, -1]
+    testing = True
+    if not max:
+        max_x = np.max(x)
+        max_y = np.max(y)
+        if max_x > max_y:
+            max = max_x
+        else:
+            max = max_y
+        testing=False
+
+    x = absolute_scaler(x, max, testing=testing)
+    y = absolute_scaler(y, max, testing=testing)
+    x = x.reshape(x.shape[0], x.shape[1], 1)
+    y = y.reshape(y.shape[0], 1)
+
+    return x, y, max
+
+def create_lstm_tensors_minmax(df, scaler):
+    data = df.values
+    if not scaler:
+        scaler = MinMaxScaler(feature_range=(0,1))
+        scaled = scaler.fit_transform(data)
+    else:
+        scaled = scaler.transform(data)
+
+    x, y = scaled[:, :-1], scaled[:, -1]
+    x = x.reshape(x.shape[0], x.shape[1], 1)
+    y = y.reshape(y.shape[0], 1)
+
+    return x, y, scaler
+
 
 if __name__ == "__main__":
-    prepare_data_single_dataset("../Fumagalli 8fold CV/train_2019.arff", "single_datasets/train")
-    prepare_data_single_dataset("../Fumagalli 8fold CV/test_2019.arff", "single_datasets/test")
+    #prepare_data_single_dataset("../Fumagalli 8fold CV/train_2019.arff", "single_datasets/train")
+    #prepare_data_single_dataset("../Fumagalli 8fold CV/test_2019.arff", "single_datasets/test")
+    create_data_multi_target_dataset("../clustering/spatial_clustering/clusters_dict_75.pkl", "single_datasets/train", "multitarget_75/train")
+    create_data_multi_target_dataset("../clustering/spatial_clustering/clusters_dict_75.pkl", "single_datasets/test", "multitarget_75/test")
