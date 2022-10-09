@@ -7,6 +7,7 @@ import os
 from utils import load_from_pickle
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
+import argparse
 
 def prepare_data_single_dataset(data_path, dst_folder):
     """
@@ -102,9 +103,28 @@ def create_lstm_tensors_minmax(df, scaler):
 
     return x, y, scaler
 
+def main(args):
+    type = args.type
+    if type == "single_target":
+        data_path = args.data_path
+        dst_folder = args.dst
+        prepare_data_single_dataset(data_path=data_path, dst_folder=dst_folder)
+    elif type == "multi_target":
+        path_to_dictionary = args.dict_src
+        dataset_folder = args.dataset_folder
+        dst_folder_path = args.dst
+        create_data_multi_target_dataset(path_to_dictionary=path_to_dictionary, dataset_folder=dataset_folder, dst_folder_path=dst_folder_path)
+
 
 if __name__ == "__main__":
-    #prepare_data_single_dataset("../Fumagalli 8fold CV/train_2019.arff", "single_datasets/train")
-    #prepare_data_single_dataset("../Fumagalli 8fold CV/test_2019.arff", "single_datasets/test")
-    create_data_multi_target_dataset("../clustering/spatial_clustering/clusters_dict_75.pkl", "single_datasets/train", "multitarget_75/train")
-    create_data_multi_target_dataset("../clustering/spatial_clustering/clusters_dict_75.pkl", "single_datasets/test", "multitarget_75/test")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--type", type=str, required=True, help="Type of dataset", choices=['single_target', 'multi_target'])
+    parser.add_argument("--dst", type=str, required=True, help="Destination directory")
+    parser.add_argument("--data_path", type=str, required=False, help="Path to the data used to create the single target dataset")
+    parser.add_argument("--dict_src", type=str, required=False, help="Path to the clustering dictionary")
+    parser.add_argument("--dataset_folder", type=str, required=False, help="Path to the folder containing the dataset")
+
+    args = parser.parse_args()
+    main(args)
+
+#python prepare_data.py --type multi_target --dict_src ../clustering/spatial_clustering/clusters_dict_40.pkl --dataset_folder single_datasets/test --dst multitarget_40_space/test

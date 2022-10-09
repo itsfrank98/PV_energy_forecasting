@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+
 import arff
 import numpy as np
 import math
@@ -8,7 +11,7 @@ from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from pyclustering.cluster.elbow import elbow
 import matplotlib.pyplot as plt
 from utils import save_to_pickle, load_from_pickle, create_clusters_dict
-
+import argparse
 def create_distance_matrix(dst_path, src='Fumagalli 8fold CV/train_2019.arff'):
     d = {}
     for row in arff.load(src):
@@ -64,7 +67,12 @@ def plot_inertia(n_clusters, inertias):
     plt.show()'''
 
 
-def main(n_clusters, distance_mat_path, clusters_dict_name, linkage="average", load=True):
+def main(args):
+    n_clusters = args.n_clusters
+    distance_mat_path = args.distance_mat_path
+    clusters_dict_name = args.clusters_dict_name
+    linkage = args.linkage
+    load = args.load
     if not load:
         create_distance_matrix(distance_mat_path, '../Fumagalli 8fold CV/train_2019.arff')
     distance_mat = load_from_pickle(distance_mat_path)
@@ -80,5 +88,16 @@ def main(n_clusters, distance_mat_path, clusters_dict_name, linkage="average", l
     save_to_pickle("spatial_clustering/{}.pkl".format(n_clusters), clustering)
     save_to_pickle(clusters_dict_name, clusters_dict)
 
-#n/2
-main(n_clusters=75, distance_mat_path="spatial_clustering/distance_mat.pkl", clusters_dict_name="spatial_clustering/clusters_dict.pkl.pkl", load=True)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n_clusters", type=int, required=True, help="How many clusters to create")
+    parser.add_argument("--distance_mat_path", type=str, required=False, help="Path to the distance matrix")
+    parser.add_argument("--clusters_dict_name", type=str, required=True, help="How the clusters' dictionary will be saved")
+    parser.add_argument("--linkage", type=str, required=True, help="Linkage type")  #average
+    parser.add_argument("--load", type=bool, required=True, help="Whether to load the distance matrix or create a new one")
+
+    args = parser.parse_args()
+    main(args)
+
+# python spatial_clustering.py --n_clusters 40 --distance_mat_path spatial_clustering/distance_mat.pkl --clusters_dict_name spatial_clustering/clusters_dict_40.pkl --linkage average --load True
