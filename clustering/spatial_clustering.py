@@ -1,6 +1,5 @@
 import sys
 sys.path.append('../')
-
 import arff
 import numpy as np
 import math

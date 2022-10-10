@@ -118,7 +118,7 @@ def main(args):
         f.write("      MAE    RMSE\n")
         f.close()
     for f in tqdm(sorted(os.listdir(train_dir))):
-        if f == ".csv":
+        if f == ".csv" or f.endswith(".txt"):
             continue
         ids = [f.split('.')[0]]
         train = pd.read_csv(os.path.join(train_dir, f))
@@ -132,6 +132,9 @@ def main(args):
         if model_type == "single_target":
             model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
         elif model_type == "multi_target":
+            '''with open(train_dir+"/ids.txt") as f:
+                for line in f:
+                    ids = line.split("_")'''
             ids = f.split(".")[0].split('_')
             model = create_multi_target_model(neurons=neurons, dropout=dropout, x_train=x_train, ids=ids, lr=lr)
         else:
