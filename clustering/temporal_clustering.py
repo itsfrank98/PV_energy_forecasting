@@ -1,10 +1,14 @@
+import sys
+sys.path.append('../')
 import arff
 from dtaidistance import dtw
 import numpy as np
-import os
 from sklearn.cluster import AgglomerativeClustering
 import pickle
 from tqdm import tqdm
+from utils import save_to_pickle, load_from_pickle
+from spatial_clustering import create_clusters_dict
+import argparse
 
 def create_dictionary():
     d = {}
@@ -12,12 +16,12 @@ def create_dictionary():
     for row in arff.load("Fumagalli 8fold CV/train_2019.arff"):
         index = row[0]
         if index != current_index:
-            d[index] = []  # List where we put all the energy values registered by a plant  each month from 2011 to 2018
+            d[index] = []  # List where we put all the energy values registered by a plant each month from 2011 to 2018
             current_index = index
         d[index].append(row[41])
     pickle.dump(d, open("dictionary_dtw.pkl", 'wb'))
 
-# create_dictionary()
+
 
 def create_distance_matrix(d):
     values = [6, 12, 36, 72, 96]
@@ -33,24 +37,31 @@ def create_distance_matrix(d):
                 distance_matrix[j, i] = dtw_dist
         pickle.dump(distance_matrix, open("distance_matrix_{}.pkl".format(v), 'wb'))
 
+def main(args):
+    n_clusters = args.n_clusters
+    distance_mat_path = args.distance_mat_path
+    clusters_dict_name = args.clusters_dict_name
+    linkage = args.linkage
 
-with open("dictionary_dtw.pkl", 'rb') as f:
-    d = pickle.load(f)
-# create_distance_matrix(d)
-linkage="average"      # Average linkage was found to be the best one among the four alternatives
-matrices_directory = "dtw_matrices"
-d_months2clusters = {   # This dictionary stores the number of clusters to create depending on how many months we consider
-    '6': 8,
-    '12': 6,
-    '36': 5,
-    '72': 6,
-    '96': 6
-}
-for f in os.listdir(matrices_directory):
-    number_of_months = f.split('_')[-1].split('.')[0]
-    with open(os.path.join(matrices_directory, f), 'rb') as f:
-        distance_mat = pickle.load(f)
-        n_clusters = d_months2clusters[number_of_months]
-        clustering_model = AgglomerativeClustering(n_clusters=n_clusters, affinity='precomputed', linkage=linkage)
-        clustering_model.fit(distance_mat)
-        pickle.dump(clustering_model, open("temporal_clustering/{}months_{}.pkl".format(number_of_months, n_clusters), 'wb'))
+    distance_mat = load_from_pickle(distance_mat_path)
+    clustering_model = AgglomerativeClustering(n_clusters=n_clusters, affinity='precomputed', linkage=linkage)
+    clustering_model.fit(distance_mat)
+
+    dictionary_dtw = load_from_pickle("dictionary_dtw.pkl")
+    lab = list(clustering_model.labels_)
+    ids = list(dictionary_dtw.keys())
+    clusters_dict = create_clusters_dict(lab, ids)
+
+    save_to_pickle("temporal_clustering/{}".format(n_clusters), clustering_model)
+    save_to_pickle(clusters_dict_name, clusters_dict)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n_clusters", type=int, required=True, help="How many clusters to create")
+    parser.add_argument("--distance_mat_path", type=str, required=False, help="Path to the distance matrix")
+    parser.add_argument("--clusters_dict_name", type=str, required=True, help="How the clusters' dictionary will be saved")
+    parser.add_argument("--linkage", type=str, required=True, help="Linkage type")  #average
+    args = parser.parse_args()
+    main(args)
+# python temporal_clustering.py --n_clusters 40 --distance_mat_path dtw_matrices/distance_matrix_96.pkl --clusters_dict_name temporal_clustering/clusters_dict_40.pkl --linkage average
