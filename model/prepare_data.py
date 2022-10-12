@@ -54,9 +54,9 @@ def create_data_multi_target_dataset(path_to_dictionary, dataset_folder, dst_fol
                 d = pd.read_csv(dataset_folder+"/"+id+".csv")
                 df = pd.concat([df, d], ignore_index=True)
                 file_name += id.split('.')[0]+"_"
-        '''with open(dst_folder_path + "/ids.txt", 'w') as f:
+        with open(dst_folder_path + "/ids.txt", 'w') as f:
             f.write(file_name)
-        file_name = "tutti_"'''
+        file_name = "tutti_"
         df.to_csv(dst_folder_path+"/"+file_name[:-1]+".csv")       # We use file_name[:-1] to prevent it from ending in "_", which isn't aesthetic
 
 
