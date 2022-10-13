@@ -46,7 +46,6 @@ def create_multi_target_model(neurons, dropout, x_train, ids, lr):
     m = Model(inputs=input, outputs=output_layers)
     tf.keras.utils.plot_model(m, to_file="/tmp/mod.png", show_shapes=True)
     m.compile(loss=losses, optimizer=Adam(learning_rate=lr), loss_weights=loss_weights, metrics=metrics_dict)
-    #print(m.summary())
     return m
 
 def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, batch_size, x_train, y_train, lr):
@@ -58,15 +57,12 @@ def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, b
             monitor='val_loss', save_best_only=True, mode='min',
             filepath=model_folder + '/{}/lstm_neur{}-do{}-ep{}-bs{}-lr{}.h5'.format(id, neurons, dropout, epochs, batch_size, lr))
     ]
-
-    '''model = Sequential()
-    model.add(LSTM(units=neurons, input_shape=x_train.shape))
-    model.add(Dropout(dropout))
-    model.add(Dense(units=1, activation='linear', name='ReLu'))
-    #model.add(Dense(units=1, activation='relu', name='output'))'''
-
     history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.002, verbose=0,
                         shuffle=False, callbacks=callbacks)
+    '''
+    y shape = (96, 3)
+    x shape = (96, 36, 1)
+    '''
     return model, history
 
 def compute_results(predictions, y_test, file_name, id):
@@ -123,6 +119,7 @@ def main(args):
         ids = [f.split('.')[0]]
         train = pd.read_csv(os.path.join(train_dir, f))
         test = pd.read_csv(os.path.join(test_dir, f))
+        create_lstm_tensors_minmax(train, None)
         x_train, y_train, scaler = create_lstm_tensors_minmax(train, None)
         x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler)
         x_test[x_test<0] = 0
@@ -164,5 +161,27 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args)
+    '''train_dir = "multitarget_1_space/train"
+    test_dir = "multitarget_1_space/test"
+    model = keras.models.load_model("multitarget_1_space/lstm_neur12-do0.3-ep200-bs12-lr0.005.h5")
+    for f in tqdm(sorted(os.listdir(train_dir))):
+        if f == ".csv" or f.endswith(".txt"):
+            continue
+        train = pd.read_csv(os.path.join(train_dir, f))
+        test = pd.read_csv(os.path.join(test_dir, f))
+        x_train, y_train, scaler = create_lstm_tensors_minmax(train, None)
+        x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler)
+        x_test[x_test<0] = 0
+        x_test[x_test>1] = 1
+        y_test[y_test<0] = 0
+        y_test[y_test>1] = 1
+        with open(train_dir+"/ids.txt") as f:
+            for line in f:
+                ids = line.split("_")
+        predictions = model.predict(x_test)
+        print(np.array(predictions).shape)
+        #test_model_multi_target(predictions, y_test, "multitarget_1_space/results1.txt", ids)
+'''
+# python models.py --train_dir multitarget_15_space/train --test_dir multitarget_15_space/test --file_name multitarget_15_space/results.txt --neurons 12 --dropout 0.3 --lr 0.005 --model_folder multitarget_15_space/models --model_type multi_target --epochs 200
+# TODO: IL MODELLO MULTITARGET VA TRAINATO SULLA CONCATENZAIONE DEGLI ESEMPI DI TRAINING DEI VARI IMPIANTI. SE HO UN CLUSTER DA 3 ELEMENTI, L'INPUT AVRÀ DIMENSIONE 12*3=36
 
-# python models.py --train_dir multitarget_75_space/train --test_dir multitarget_75_space/test --file_name multitarget_75_space/results.txt --neurons 12 --dropout 0.3 --lr 0.005 --model_folder multitarget_75_space/models --model_type multi_target --epochs 200

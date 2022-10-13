@@ -4,7 +4,7 @@ sys.path.append('../')
 import arff
 import pandas as pd
 import os
-from utils import load_from_pickle, save_to_pickle
+from utils import load_from_pickle
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import argparse
@@ -16,6 +16,7 @@ def prepare_data_single_dataset(data_path, dst_folder):
     Then, they will be merged to train the multitarget models
     :return:
     """
+    cols = ['0', '1', '2', '3', '4', '5', '6', '7','8', '9', '10', '11', '12']
     if not os.path.isdir(os.path.join(dst_folder)):
         os.mkdir(os.path.join(dst_folder))
     current_id = ""
@@ -26,6 +27,7 @@ def prepare_data_single_dataset(data_path, dst_folder):
         id = row[0]
         if current_id != id:
             df = pd.DataFrame(l_series)
+            df = df[cols]
             df.to_csv(dst_folder+"/{}.csv".format(current_id))
             current_id = id
             l_series = []
@@ -44,6 +46,7 @@ def create_data_multi_target_dataset(path_to_dictionary, dataset_folder, dst_fol
     :param dst_folder_name: Name of the folder where the file containing grouped plants will be saved
     :return:
     """
+    cols = ['0', '1', '2', '3', '4', '5', '6', '7','8', '9', '10', '11', '12']
     os.makedirs(dst_folder_path, exist_ok=True)
     clusters_dict = load_from_pickle(path_to_dictionary)
     for k in clusters_dict.keys():
@@ -52,11 +55,12 @@ def create_data_multi_target_dataset(path_to_dictionary, dataset_folder, dst_fol
         for id in clusters_dict[k]:
             if id != "133.0":   # For some reason, the csv corresponding to the plant with id '133.0' wasn't created so we skip this id
                 d = pd.read_csv(dataset_folder+"/"+id+".csv")
-                df = pd.concat([df, d], ignore_index=True)
+                d = d[cols]
+                df = pd.concat([df, d], ignore_index=True, axis=1)
                 file_name += id.split('.')[0]+"_"
-        with open(dst_folder_path + "/ids.txt", 'w') as f:
+        '''with open(dst_folder_path + "/ids.txt", 'w') as f:
             f.write(file_name)
-        file_name = "tutti_"
+        file_name = "tutti_"'''
         df.to_csv(dst_folder_path+"/"+file_name[:-1]+".csv")       # We use file_name[:-1] to prevent it from ending in "_", which isn't aesthetic
 
 
@@ -94,17 +98,24 @@ def create_lstm_tensors(df, max=False):
 
 def create_lstm_tensors_minmax(df, scaler):
     data = df.values
+    columns = np.arange(start=1, stop=len(df.columns))
+    y_columns = np.arange(start=12, stop=len(df.columns)+1, step=13) + 1
+    x_columns = [c for c in columns if c not in y_columns]
+
     if not scaler:
         scaler = MinMaxScaler(feature_range=(0,1))
         scaled = scaler.fit_transform(data)
     else:
         scaled = scaler.transform(data)
-
-    x, y = scaled[:, :-1], scaled[:, -1]
+    x, y = scaled[:, x_columns], scaled[:, y_columns]
     x = x.reshape(x.shape[0], x.shape[1], 1)
-    y = y.reshape(y.shape[0], 1)
-
-    return x, y, scaler
+    flat_y = []
+    for i in range(y.shape[0]):
+        for j in range(y.shape[1]):
+            flat_y.append(y[i, j])
+    flat_y = np.array(flat_y)
+    flat_y = flat_y.reshape(flat_y.shape[0], 1)
+    return x, flat_y, scaler
 
 def main(args):
     type = args.type
