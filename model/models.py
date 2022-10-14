@@ -1,4 +1,6 @@
 """ File containing the functions to create the single target and the multitarget models """
+import sys
+sys.path.append('../')
 import keras
 from keras import Model
 from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -14,6 +16,8 @@ import numpy as np
 import random as rn
 from tqdm import tqdm
 import argparse
+from utils import sort_results
+
 
 np.random.seed(42)
 tf.random.set_seed(42)
@@ -52,17 +56,13 @@ def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, b
     if not os.path.isdir(os.path.join(model_folder)):
         os.mkdir(os.path.join(model_folder))
     callbacks = [
-        EarlyStopping(monitor='val_loss', mode='min', patience=20),
+        EarlyStopping(monitor='val_loss', mode='min', patience=100),
         ModelCheckpoint(
             monitor='val_loss', save_best_only=True, mode='min',
             filepath=model_folder + '/{}/lstm_neur{}-do{}-ep{}-bs{}-lr{}.h5'.format(id, neurons, dropout, epochs, batch_size, lr))
     ]
     history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.002, verbose=0,
                         shuffle=False, callbacks=callbacks)
-    '''
-    y shape = (96, 3)
-    x shape = (96, 36, 1)
-    '''
     return model, history
 
 def compute_results(predictions, y_test, file_name, id):
@@ -76,24 +76,14 @@ def compute_results(predictions, y_test, file_name, id):
 
 def test_model_multi_target(predictions, y_test, file_name, ids):
     """
-    A multi-target model trained on data coming from more than two plants, will predict two or more values for each test sample, but we are only interested in one
-    of them depending on the plant. Suppose to have a network trained with two plants. At prediction, two arrays of len 24 will be computed. The first 12 values
-    from the first array contain the predictions for the first plant, the last 12 values from the second array are the predictions for the second plant. The other
-    numbers are useless and mustn't be considered. So we scan the prediction array to retrieve the relevant values, we compare them to the actual results and perform
-    the evaluation metrics. Then we write the results computed for each plant in the results file.
-    If the multi-target model was trained only on one plant, it is the same thing as a single-target model.
     :param predictions: Predictions of the model
     :param y_test: Actual values
     :param file_name: Name on the file where the results will be written
     :param ids: IDs of the plants that the model considers.
     """
-    j = 0   # Index used to state which are the relevant values for the current plant
+    j = 0
     for i in range(len(ids)):
-        pred = []
-        for k in range(j, j+12):
-            pred.append(list(predictions[i][k]))
-        pred = [item for sublist in pred for item in sublist]    # Pred is a list of lists of length 1. We flat it
-        compute_results(pred, y_test[j:j+12], file_name, ids[i])
+        compute_results(predictions[j:j+12, :], y_test[j:j+12, :], file_name, ids[i])
         j += 12
 
 
@@ -110,9 +100,6 @@ def main(args):
 
     os.makedirs(model_folder, exist_ok=True)
 
-    with open(file_name, 'w') as f:
-        f.write("      MAE    RMSE\n")
-        f.close()
     for f in tqdm(sorted(os.listdir(train_dir))):
         if f == ".csv" or f.endswith(".txt"):
             continue
@@ -137,13 +124,15 @@ def main(args):
         else:
             raise ValueError("Invalid model type, it can only be 'single_target' or 'multi_target'")
 
-        model, hist = train_model(id, model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
+        model, hist = train_model(ids, model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
                                   x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr)
         predictions = model.predict(x_test)
         if model_type == "multi_target" and len(ids)>1:    # If there is only one element in the cluster it's like a single target model
-            test_model_multi_target(predictions, y_test, file_name, ids)
+            test_model_multi_target(np.vstack(np.array(predictions)), y_test, file_name, ids)
         else:
             compute_results(predictions, y_test, file_name, ids[0])
+
+    #sort_results("r.txt", file_name)
 
 
 if __name__ == "__main__":
@@ -182,6 +171,4 @@ if __name__ == "__main__":
         print(np.array(predictions).shape)
         #test_model_multi_target(predictions, y_test, "multitarget_1_space/results1.txt", ids)
 '''
-# python models.py --train_dir multitarget_15_space/train --test_dir multitarget_15_space/test --file_name multitarget_15_space/results.txt --neurons 12 --dropout 0.3 --lr 0.005 --model_folder multitarget_15_space/models --model_type multi_target --epochs 200
-# TODO: IL MODELLO MULTITARGET VA TRAINATO SULLA CONCATENZAIONE DEGLI ESEMPI DI TRAINING DEI VARI IMPIANTI. SE HO UN CLUSTER DA 3 ELEMENTI, L'INPUT AVRÀ DIMENSIONE 12*3=36
-
+# python models.py --train_dir multitarget_15_space/train --test_dir multitarget_15_space/test --file_name multitarget_15_space/results1.txt --neurons 12 --dropout 0.3 --lr 0.005 --model_folder multitarget_15_space/models --model_type multi_target --epochs 200

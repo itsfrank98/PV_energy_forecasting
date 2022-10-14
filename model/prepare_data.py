@@ -1,6 +1,5 @@
 import sys
 sys.path.append('../')
-
 import arff
 import pandas as pd
 import os
@@ -8,6 +7,7 @@ from utils import load_from_pickle
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import argparse
+
 
 def prepare_data_single_dataset(data_path, dst_folder):
     """
@@ -64,42 +64,10 @@ def create_data_multi_target_dataset(path_to_dictionary, dataset_folder, dst_fol
         df.to_csv(dst_folder_path+"/"+file_name[:-1]+".csv")       # We use file_name[:-1] to prevent it from ending in "_", which isn't aesthetic
 
 
-def absolute_scaler(x, max, testing=False):
-    if testing:
-        for i in range(len(x)):
-            if i <= max:
-                x[i] /= max
-            else:
-                x[i] = 1
-    else:
-        x = x/max
-    return x
-
-def create_lstm_tensors(df, max=False):
-    # USELESS
-    data = df.values
-    x, y = data[:, 1:-1], data[:, -1]
-    testing = True
-    if not max:
-        max_x = np.max(x)
-        max_y = np.max(y)
-        if max_x > max_y:
-            max = max_x
-        else:
-            max = max_y
-        testing=False
-
-    x = absolute_scaler(x, max, testing=testing)
-    y = absolute_scaler(y, max, testing=testing)
-    x = x.reshape(x.shape[0], x.shape[1], 1)
-    y = y.reshape(y.shape[0], 1)
-
-    return x, y, max
-
 def create_lstm_tensors_minmax(df, scaler):
     data = df.values
     columns = np.arange(start=1, stop=len(df.columns))
-    y_columns = np.arange(start=12, stop=len(df.columns)+1, step=13) + 1
+    y_columns = np.arange(start=12, stop=len(df.columns)+1, step=13) + 1    # Every 12 columns we have the value of the target variable
     x_columns = [c for c in columns if c not in y_columns]
 
     if not scaler:
