@@ -103,10 +103,9 @@ def main(args):
     for f in tqdm(sorted(os.listdir(train_dir))):
         if f == ".csv" or f.endswith(".txt"):
             continue
-        ids = [f.split('.')[0]]
+        ids = f.split('.')[0]
         train = pd.read_csv(os.path.join(train_dir, f))
         test = pd.read_csv(os.path.join(test_dir, f))
-        create_lstm_tensors_minmax(train, None)
         x_train, y_train, scaler = create_lstm_tensors_minmax(train, None)
         x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler)
         x_test[x_test<0] = 0
@@ -119,20 +118,20 @@ def main(args):
             '''with open(train_dir+"/ids.txt") as f:
                 for line in f:
                     ids = line.split("_")'''
-            ids = f.split(".")[0].split('_')
-            model = create_multi_target_model(neurons=neurons, dropout=dropout, x_train=x_train, ids=ids, lr=lr)
+            ids_list = ids.split('_')
+            model = create_multi_target_model(neurons=neurons, dropout=dropout, x_train=x_train, ids=ids_list, lr=lr)
         else:
             raise ValueError("Invalid model type, it can only be 'single_target' or 'multi_target'")
 
         model, hist = train_model(ids, model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
                                   x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr)
         predictions = model.predict(x_test)
-        if model_type == "multi_target" and len(ids)>1:    # If there is only one element in the cluster it's like a single target model
-            test_model_multi_target(np.vstack(np.array(predictions)), y_test, file_name, ids)
+        if model_type == "multi_target" and len(ids_list)>1:    # If there is only one element in the cluster it's like a single target model
+            test_model_multi_target(np.vstack(np.array(predictions)), y_test, "r.txt", ids_list)
         else:
-            compute_results(predictions, y_test, file_name, ids[0])
+            compute_results(predictions, y_test, "r.txt", ids[0])
 
-    #sort_results("r.txt", file_name)
+    sort_results("r.txt", file_name)
 
 
 if __name__ == "__main__":
@@ -150,15 +149,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args)
-    '''train_dir = "multitarget_1_space/train"
+    '''train_dir = "multitarget_1_space/train1"
     test_dir = "multitarget_1_space/test"
     model = keras.models.load_model("multitarget_1_space/lstm_neur12-do0.3-ep200-bs12-lr0.005.h5")
     for f in tqdm(sorted(os.listdir(train_dir))):
         if f == ".csv" or f.endswith(".txt"):
             continue
-        train = pd.read_csv(os.path.join(train_dir, f))
+        train1 = pd.read_csv(os.path.join(train_dir, f))
         test = pd.read_csv(os.path.join(test_dir, f))
-        x_train, y_train, scaler = create_lstm_tensors_minmax(train, None)
+        x_train, y_train, scaler = create_lstm_tensors_minmax(train1, None)
         x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler)
         x_test[x_test<0] = 0
         x_test[x_test>1] = 1
@@ -171,4 +170,5 @@ if __name__ == "__main__":
         print(np.array(predictions).shape)
         #test_model_multi_target(predictions, y_test, "multitarget_1_space/results1.txt", ids)
 '''
-# python models.py --train_dir multitarget_15_space/train --test_dir multitarget_15_space/test --file_name multitarget_15_space/results1.txt --neurons 12 --dropout 0.3 --lr 0.005 --model_folder multitarget_15_space/models --model_type multi_target --epochs 200
+# python models.py --train_dir multitarget_15_space/train1 --test_dir multitarget_15_space/test --file_name multitarget_15_space/results1.txt --neurons 12 --dropout 0.3 --lr 0.005 --model_folder multitarget_15_space/models --model_type multi_target --epochs 200
+

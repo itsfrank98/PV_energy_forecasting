@@ -12,8 +12,8 @@ import argparse
 def prepare_data_single_dataset(data_path, dst_folder):
     """
     This function takes the original dataset and splits it in multiple ones. More precisely, it creates a separated
-    dataset for each plant. These datasets will be used to train the single target models related to each plant.
-    Then, they will be merged to train the multitarget models
+    dataset for each plant. These datasets will be used to train1 the single target models related to each plant.
+    Then, they will be merged to train1 the multitarget models
     :return:
     """
     cols = ['0', '1', '2', '3', '4', '5', '6', '7','8', '9', '10', '11', '12']
