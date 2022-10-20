@@ -1,4 +1,5 @@
 import pickle
+import os
 
 def save_to_pickle(name, c):
     with open(name, 'wb') as f:
@@ -27,3 +28,24 @@ def create_clusters_dict(labels, plants_ids):
         clusters_dict[label] = d
     return clusters_dict
 
+def sort_results(unsorted_file_path, sorted_file_path):
+    dic = {}
+    s1 = 0
+    s2 = 0
+    with open(unsorted_file_path, 'r') as f:
+        for line in f:
+            d = line.split()
+            k = d[0][:-1]
+            if k != "MA":
+                mae, rmse = float(d[1]), float(d[2])
+                s1 += mae
+                s2 += rmse
+                dic[k] = (mae, rmse)
+        f.close()
+    with open(sorted_file_path, 'w') as f:
+        f.write("      MAE         RMSE\n")
+        for k in sorted(dic.keys()):
+            f.write("{}:  {}\n".format(k, dic[k]))
+        f.write("AVG:  {}  {}".format(s1/len(dic.keys()), s2/len(dic.keys())))
+        f.close()
+    #os.remove(unsorted_file_path)
