@@ -1,72 +1,9 @@
-import sys
-sys.path.append('../')
-import arff
-import pandas as pd
 import os
-from utils import load_from_pickle
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import argparse
-from tqdm import tqdm
-
-def prepare_data_single_dataset(data_path, dst_folder):
-    """
-    This function takes the original dataset and splits it in multiple ones. More precisely, it creates a separated
-    dataset for each plant. These datasets will be used to train1 the single target models related to each plant.
-    Then, they will be merged to train the multitarget models
-    :return:
-    """
-    cols = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    if not os.path.isdir(os.path.join(dst_folder)):
-        os.mkdir(os.path.join(dst_folder))
-    current_id = ""
-    #7, 10, 13, 16, 19, 22,
-    x_positions = [25, 28, 31, 34, 37, 40, 7, 10, 13, 16, 19, 22]   # List of indexes containing, in the row, the relevant data
-    l_series = []
-    for row in arff.load(data_path):
-        row = list(row)
-        id = row[0]
-        if current_id != id and l_series:
-            df = pd.DataFrame(l_series)
-            df = df[cols]
-            df.to_csv(dst_folder+"/{}.csv".format(current_id))
-            current_id = id
-            l_series = []
-        l = []
-        for i in x_positions:
-            l.append(row[i])
-        l.append(row[-1])
-        l_series.append(l)
-
-
-def create_data_multi_dataset(path_to_dictionary, data_path, dst_folder, axis):
-    """
-    Groups together the series concerning the plants that were clustered together, and saves them in separate files
-    :param path_to_dictionary: Path to the dictionary having as keys the cluster IDs and as values the list of IDs of
-    the plants that were clustered together
-    :param data_path: Folder containing one csv file for each plant
-    :param dst_folder_name: Name of the folder where the file containing grouped plants will be saved
-    :param axis: can be 0 or 1. If it is equal to 1, the dataframes will be concatenated horizontally. If it is 0, they
-    will be concatenated vertically. The former case applies when we are preparing data for the multitarget model, that
-    requires the series coming from the same plant cluster to be concatenated horizontally. If instead we are preparing
-    data for training a single target model with series coming from all the plants in the cluster, they will be stacked
-    vertically
-    :return:
-    """
-    cols = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
-    os.makedirs(dst_folder, exist_ok=True)
-    clusters_dict = load_from_pickle(path_to_dictionary)
-    for k in clusters_dict.keys():
-        df = pd.DataFrame()
-        for id in clusters_dict[k]:
-            if id != "133.0":   # For some reason, the csv corresponding to the plant with id '133.0' wasn't created so we skip this id
-                d = pd.read_csv(data_path + "/" + id + ".csv")
-                d = d[cols]
-                df = pd.concat([df, d], ignore_index=True, axis=axis)
-        '''with open(dst_folder_path + "/ids.txt", 'w') as f:
-            f.write(file_name)
-        file_name = "tutti_"'''
-        df.to_csv(dst_folder + "/" + str(k) + ".csv")
+from prepare_data.single_dataset import prepare_data_single_dataset
+from prepare_data.multitarget_modeling import prepare_data_multitarget
 
 
 def create_lstm_tensors_minmax(df, scaler, aggregate_training):
@@ -114,7 +51,7 @@ def main(args):
             axis = 1
         elif type == "single_target_clustering":
             axis = 0
-        create_data_multi_dataset(path_to_dictionary=path_to_dictionary, data_path=dataset_folder, dst_folder=dst_folder, axis=axis)
+        prepare_data_multitarget(path_to_dictionary=path_to_dictionary, data_path=dataset_folder, dst_folder=dst_folder, axis=axis)
 
 
 if __name__ == "__main__":
@@ -128,5 +65,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
 
-#python prepare_data.py --type multi_target --dict_src ../clustering/spatial_clustering/clusters_dict_40.pkl --dataset_folder single_datasets/test --dst multitarget_40_space/test
-#python prepare_data.py --type single_target --data_path ../Fumagalli\ 8fold\ CV/test_2019.arff --dst single_datasets/6months/test
+#python preprocess.py --type multi_target --dict_src ../clustering/spatial_clustering/clusters_dict_40.pkl --dataset_folder single_datasets/test --dst multitarget_40_space/test
+#python preprocess.py --type single_target --data_path ../Fumagalli\ 8fold\ CV/test_2019.arff --dst single_datasets/6months/test
