@@ -37,15 +37,19 @@ def sort_results(unsorted_file_path, sorted_file_path):
             d = line.split()
             k = d[0][:-1]
             if k != "MA":
-                mae, rmse = float(d[1]), float(d[2])
+                a = float(d[1])
+                s1 += a
+                dic[k] = a
+                '''mae, rmse = float(d[1]), float(d[2])
                 s1 += mae
                 s2 += rmse
-                dic[k] = (mae, rmse)
+                dic[k] = (mae, rmse)'''
         f.close()
     with open(sorted_file_path, 'w') as f:
         f.write("      MAE         RMSE\n")
         for k in sorted(dic.keys()):
             f.write("{}:  {}\n".format(k, dic[k]))
-        f.write("AVG:  {}  {}".format(s1/len(dic.keys()), s2/len(dic.keys())))
+        #f.write("AVG:  {}  {}".format(s1/len(dic.keys()), s2/len(dic.keys())))
+        f.write("AVG:  {}".format(s1/len(dic.keys())))
         f.close()
     #os.remove(unsorted_file_path)

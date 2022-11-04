@@ -7,13 +7,14 @@ from prepare_data.multitarget_modeling import prepare_data_multitarget
 
 
 def create_lstm_tensors_minmax(df, scaler, aggregate_training):
-    data = df.values
-    columns = np.arange(start=1, stop=len(df.columns))
-    y_columns = np.arange(start=12, stop=len(df.columns)+1, step=13) + 1    # Every 12 columns we have the value of the target variable
+    #df = df[['Unnamed: 0', '0m', '0', '1m', '1', '2m', '2', '3m', '3', '4m', '4', '5m', '5', '6m', '6', '7m', '7', '8m', '8', '9m', '9', '10m', '10', '11m', '11', '12']]
+    data = df.values[:, 1:]
+    columns = np.arange(start=0, stop=data.shape[1])
+    y_columns = np.arange(start=12, stop=data.shape[1]+1, step=13)    # Every 12 columns we have the value of the target variable
     if aggregate_training:
         y_columns = [25]
-    print(data[:, y_columns])
     x_columns = [c for c in columns if c not in y_columns]
+
     if not scaler:
         scaler = MinMaxScaler(feature_range=(0,1))
         scaled = scaler.fit_transform(data)
@@ -27,8 +28,7 @@ def create_lstm_tensors_minmax(df, scaler, aggregate_training):
             y_flat.append(y[i, j])
     y_flat = np.array(y_flat)
     y_flat = y_flat.reshape(y_flat.shape[0], 1)
-
-    # If we are testing we need to deal with the out of range values
+    # If we are testing we need to deal with the out of range values also in the x
     if scaler:
         x[x<0] = 0
         x[x>1] = 1
