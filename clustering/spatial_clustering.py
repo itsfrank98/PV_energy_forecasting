@@ -45,8 +45,8 @@ def main(args):
     if not load:
         create_distance_matrix(distance_mat_path, '../Fumagalli 8fold CV/train_2019.arff')
     distance_mat = load_from_pickle(distance_mat_path)
-    #clustering = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed", linkage=linkage)
-    clustering = KMedoids(n_clusters=n_clusters, random_state=0, metric='precomputed')
+    clustering = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed", linkage=linkage)
+    #clustering = KMedoids(n_clusters=n_clusters, random_state=0, metric='precomputed')
     clustering.fit(distance_mat)
 
     lab = list(clustering.labels_)
