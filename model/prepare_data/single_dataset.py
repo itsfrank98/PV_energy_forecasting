@@ -13,7 +13,7 @@ def prepare_data_single_dataset(data_path, dst_folder):
     if not os.path.isdir(os.path.join(dst_folder)):
         os.mkdir(os.path.join(dst_folder))
     current_id = ""
-    #7, 10, 13, 16, 19, 22,
+    #7, 10Medoids, 13, 16, 19, 22,
     x_positions = [25, 28, 31, 34, 37, 40, 7, 10, 13, 16, 19, 22]   # List of indexes containing, in the row, the relevant data
     l_series = []
     for row in arff.load(data_path):

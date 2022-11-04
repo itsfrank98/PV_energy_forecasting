@@ -1,6 +1,6 @@
+import argparse
 import sys
-sys.path.append('../')
-
+sys.path.append('../..')
 from utils import load_from_pickle
 import os
 import pandas as pd
@@ -30,3 +30,22 @@ def prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis):
                 d = d[cols]
                 df = pd.concat([df, d], ignore_index=True, axis=axis)
         df.to_csv(dst_folder + "/" + str(k) + ".csv")
+
+def main(args):
+    path_to_dictionary = args.path_to_dictionary
+    data_path = args.data_path
+    dst_folder = args.dst_folder
+    axis = args.axis
+    prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--path_to_dictionary", type=str, required=True, help="Path to the clustering dictionary")
+    parser.add_argument("--data_path", type=str, required=True, help="Path to the directory containing data to be aggregated")
+    parser.add_argument("--dst_folder", type=str, required=True, help="Path to the destination directory")
+    parser.add_argument("--axis", type=int, choices=[0, 1], help="Set this to 0 for vertically concatenating the rows. Set this to 1 for horizontally concatenating the rows.")
+
+    args = parser.parse_args()
+    main(args)
+    # python multitarget_modeling.py --path_to_dictionary ../../clustering/spatial_clustering/clusters_dict_5.pkl --data_path ../single_target/test --dst_folder ../multitarget_space/5/test --axis 1

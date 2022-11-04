@@ -35,19 +35,17 @@ def prepare_data_aggregated_test(clustering_dict, dst_folder, train_dir):
         if f == ".csv":
             continue
         fname = f.split(".")[0]
-
         test_df = pd.read_csv(os.path.join(p, fname+".0.csv"))
         mean_cols = ['0m', '1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m', '10m', '11m']
 
         # Retrieve the cluster to which the plant belongs
         for k in clustering_dict.keys():
-            if fname+".0" in clustering_dict[k]: #TODO here
-                cluster = k
+            if fname+".0" in clustering_dict[k]:
+                cluster = str(k)
                 break
-
         df_means = pd.read_csv(os.path.join(train_dir, cluster+".csv"))[mean_cols][:len(test_df)]
-        break
         definitive_df = pd.concat((df_means.loc[:, df_means.columns != 'index'], test_df), axis=1)
+        definitive_df = definitive_df.loc[:, definitive_df.columns != 'Unnamed: 0']
         definitive_df.to_csv(os.path.join(dst_folder, f))
 
 def main(args):
@@ -56,17 +54,18 @@ def main(args):
     path_to_dictionary = args.path_to_dictionary
     clustering_dict = load_from_pickle(path_to_dictionary)
 
-    n_clusters = path_to_dictionary.split('.')[0].split('_')[-1]
+    n_clusters = path_to_dictionary.split('/')[-1].split('.')[0].split('_')[-1]
     if space:
         a = "space"
     else:
         a = "time"
-    dst_folder_train = "multitarget_vertical/{}/{}/train".format(a, n_clusters)
-    dst_folder_test = "multitarget_vertical/{}/{}/test".format(a, n_clusters)
-    #os.makedirs(dst_folder_train, exist_ok=True)
-
-    #prepare_data_aggregated_train(data_path=train_data_path, path_to_dictionary=path_to_dictionary, dst_folder=dst_folder_train)
+    dst_folder_train = "../multitarget_vertical/{}/kmed/{}/train".format(a, n_clusters)
+    dst_folder_test = "../multitarget_vertical/{}/kmed/{}/test".format(a, n_clusters)
+    os.makedirs(dst_folder_train, exist_ok=True)
+    os.makedirs(dst_folder_test, exist_ok=True)
+    prepare_data_aggregated_train(data_path=train_data_path, path_to_dictionary=path_to_dictionary, dst_folder=dst_folder_train)
     prepare_data_aggregated_test(clustering_dict=clustering_dict, train_dir=dst_folder_train, dst_folder=dst_folder_test)
+
 
 if __name__ =="__main__":
     parser = argparse.ArgumentParser()
@@ -75,3 +74,4 @@ if __name__ =="__main__":
     parser.add_argument("--path_to_dictionary", type=str, required=True, help="Path to the clustering dictionary")
     args = parser.parse_args()
     main(args)
+#python aggregated.py --train_data_path ../single_target/train/ --space True --path_to_dictionary ../../clustering/spatial_clustering/clusters_dict_10_aggl.pkl
