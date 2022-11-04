@@ -10,14 +10,12 @@ from utils import sort_results
 import argparse
 from utils import load_from_pickle
 
-
 def train_models(train_dir, neurons, dropout, model_folder, epochs, lr):
     scalers_dict = {}
     for f in tqdm(sorted(os.listdir(train_dir))):
-        print(f)
         if f == ".csv" or f.endswith(".txt"):
             continue
-        fname = f.split('.')
+        fname = f.split('.')[0]
         train = pd.read_csv(os.path.join(train_dir, f))
         x_train, y_train, scaler = create_lstm_tensors_minmax(train, None, aggregate_training=True)
         scalers_dict[fname] = scaler
@@ -52,12 +50,14 @@ def main(args):
     scalers_dict = train_models(train_dir=train_dir, neurons=neurons, dropout=dropout, model_folder=model_folder, epochs=epochs, lr=lr)
     for k in scalers_dict.keys():
         scaler = scalers_dict[k]
-        ids = clustering_dict[k]
+        ids = clustering_dict[int(k)]
         for id in ids:
-            test = pd.read_csv(os.path.join(test_dir, id+'.0.csv'))
+            if id == "133.0":
+                continue
+            test = pd.read_csv(os.path.join(test_dir, id+'.csv'))
             x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler, aggregate_training=True)
             model = keras.models.load_model(os.path.join(model_folder, k, "lstm_neur{}-do{}-ep{}-bs12-lr{}.h5".format(neurons, dropout, epochs, lr)))
-            evaluate(model, x_test, y_test, "r.txt", id)
+            evaluate(model, x_test, y_test, "r.txt", id.split('.')[0])
     sort_results("r.txt", file_name)
 
 
