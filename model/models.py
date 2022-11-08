@@ -1,4 +1,4 @@
-""" File containing the functions to create the single target and the multitarget models """
+""" File containing the functions to create the models """
 import sys
 sys.path.append('../')
 import keras
@@ -8,15 +8,13 @@ from keras.layers import LSTM, Dropout, Dense, Input
 from keras.metrics import RootMeanSquaredError
 from keras.optimizers import Adam
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from preprocess import create_lstm_tensors_minmax
+from preprocess import create_lstm_tensors
 import pandas as pd
 import tensorflow as tf
 import os
 import numpy as np
 import random as rn
 from tqdm import tqdm
-import argparse
-from utils import sort_results, load_from_pickle
 
 
 np.random.seed(42)
@@ -65,9 +63,22 @@ def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, b
                         shuffle=False, callbacks=callbacks)
     return model, history
 
-def train_separate_models(train_dir, test_dir, model_type, neurons, dropout, model_folder, epochs, lr, aggregate_training, clustering_dictionary:dict):
+def train_separate_models(train_dir, test_dir, model_type, neurons, dropout, model_folder, epochs, lr, y_column, preprocess, clustering_dictionary:dict, step=0):
     """
     Function that trains one model for each plant or a multitarget model
+    :param train_dir: Directory containing training files
+    :param test_dir: Directory containing testing files
+    :param model_type: Type of model to create
+    :param neurons:
+    :param dropout:
+    :param model_folder: Folder where the models will be saved
+    :param epochs:
+    :param lr:
+    :param aggregate_training: Set to true if we are performing aggregate training
+    :param y_column:
+    :param preprocess:
+    :param clustering_dictionary:
+    :param step:
     :return:
     """
     for f in tqdm(sorted(os.listdir(train_dir))):
@@ -80,8 +91,8 @@ def train_separate_models(train_dir, test_dir, model_type, neurons, dropout, mod
             ids = fname
         train = pd.read_csv(os.path.join(train_dir, f))
         test = pd.read_csv(os.path.join(test_dir, f))
-        x_train, y_train, scaler = create_lstm_tensors_minmax(train, None, aggregate_training=aggregate_training)
-        x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler, aggregate_training=aggregate_training)
+        x_train, y_train, scaler = create_lstm_tensors(train, None, preprocess=preprocess, y_column=y_column, step=step)
+        x_test, y_test, _ = create_lstm_tensors(test, scaler, preprocess=preprocess, y_column=y_column, step=step)
         if model_type == "single_target":
             model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
         elif model_type == "multi_target":
@@ -90,14 +101,12 @@ def train_separate_models(train_dir, test_dir, model_type, neurons, dropout, mod
         model, hist = train_model(f, model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
                                   x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr)
         predictions = model.predict(x_test)
-        '''x_test = pd.DataFrame(x_test.reshape((12, 12)))
-        predictions = x_test.mean(axis=1)'''
         if model_type == "multi_target":
             test_model_multi(np.vstack(np.array(predictions)), y_test, "r.txt", ids)
         else:
             compute_results(predictions, y_test, "r.txt", ids)
 
-def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr):
+def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column, preprocess):
     """
     Function that trains a unique model using data coming for all the plants
     """
@@ -106,7 +115,7 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
         if f == ".csv" or f.endswith(".txt"):
             continue
         train = pd.concat((train, pd.read_csv(os.path.join(train_dir, f))))
-    x_train, y_train, scaler = create_lstm_tensors_minmax(train, scaler=None, aggregate_training=False)
+    x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
 
     model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
     #model = keras.models.load_model("single_target/unique/lstm_neur12-do0.3-ep200-bs12-lr0.003.h5")
@@ -119,7 +128,7 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
         if f == ".csv" or f.endswith(".txt"):
             continue
         test = pd.read_csv(os.path.join(test_dir, f))
-        x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler=scaler, aggregate_training=False)
+        x_test, y_test, _ = create_lstm_tensors(test, scaler=scaler, y_column=y_column, preprocess=preprocess)
         pred = model.predict(x_test)
         test_model_multi(np.vstack(np.array(pred)), y_test, "r.txt", [id])  # Calculate MAE and RMSE
 
@@ -136,7 +145,7 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
     print(rse)
 
 
-def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr):
+def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column, preprocess):
     """Train a separate single target model for each cluster of points"""
     for f in tqdm(sorted(os.listdir(train_dir))):
         if f == ".csv" or f.endswith(".txt"):
@@ -144,8 +153,8 @@ def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_f
         ids = f.split('.')[0]
         train = pd.read_csv(os.path.join(train_dir, f))
         test = pd.read_csv(os.path.join(test_dir, f))
-        x_train, y_train, scaler = create_lstm_tensors_minmax(train, scaler=None, aggregate_training=False)
-        x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler=scaler, aggregate_training=None)
+        x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
+        x_test, y_test, _ = create_lstm_tensors(test, scaler=scaler, y_column=y_column, preprocess=preprocess)
         model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
         model, hist = train_model(ids, model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
                                   x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr)
@@ -186,70 +195,6 @@ def compute_rse(pred, pred_avg, actual, file_name, id):
         f.write("%s: %s \n"%(rse))'''
     return rse
 
-def main(args):
-    f = open("r.txt", 'r+')     # r.txt is a utility file where the results will be reported. Then they will be sorted alphabetically according to the plant IDs and written on the file that the user indicated
-    # Delete the previous content from r.txt
-    f.seek(0)
-    f.truncate()
-    f.close()
-
-    train_dir = args.train_dir
-    test_dir = args.test_dir
-    file_name = args.file_name
-    neurons = args.neurons
-    dropout = args.dropout
-    lr = args.lr
-    epochs = args.epochs
-    model_folder = args.model_folder
-    training_type = args.training_type
-    aggregate_training = args.aggregate_training
-    clustering_dictionary = args.clustering_dictionary
-
-    os.makedirs(model_folder, exist_ok=True)
-    if training_type == "single_model_clustering":
-        train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr)
-    elif training_type == "single_model":
-        train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr)
-    elif training_type == "multi_target":
-        clustering_dict = load_from_pickle(clustering_dictionary)
-        train_separate_models(train_dir=train_dir, test_dir=test_dir, model_type=training_type, neurons=neurons, dropout=dropout,
-                              model_folder=model_folder, epochs=epochs, lr=lr, aggregate_training=aggregate_training, clustering_dictionary=clustering_dict)
-    elif training_type == "single_target":
-        train_separate_models(train_dir=train_dir, test_dir=test_dir, model_type=training_type, neurons=neurons, dropout=dropout,
-                              model_folder=model_folder, epochs=epochs, lr=lr, aggregate_training=aggregate_training, clustering_dictionary=None)
-    sort_results("r.txt", file_name)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--train_dir", type=str, required=True, help="Path to the training directory")
-    parser.add_argument("--test_dir", type=str, required=True, help="Path to the testing directory")
-    parser.add_argument("--file_name", type=str, required=True, help="Name of the file where the results will be written")
-    parser.add_argument("--neurons", type=int, required=True, help="Number of neurons")
-    parser.add_argument("--dropout", type=float, required=True, help="Dropout")
-    parser.add_argument("--lr", type=float, required=True, help="Learning rate")
-    parser.add_argument("--epochs", type=int, required=True, help="Number of epochs")
-    parser.add_argument("--model_folder", type=str, required=True, help="Folder where the models will be saved")
-    parser.add_argument("--training_type", type=str, required=True, help="Type of the model to create. It can either be:\n"
-                                                                         " -'single_target' to train one model for each plant\n"
-                                                                         " -'multi_target' to train a multitarget model for each plant cluster\n"
-                                                                         " -'single_model' to train a unique model with data coming from all the plants\n"
-                                                                         " -'single_model_clustering' to train, for each cluster of plants, a unique model with data coming from all the plants in that cluster",
-                        choices=['single_target', 'multi_target', 'single_model', 'single_model_clustering'])
-    parser.add_argument("--aggregate_training", required=False, type=bool, help="Set this to true if you are training on the aggregated dataset")
-    parser.add_argument("--clustering_dictionary", required="--argument" in sys.argv or "single_model_clustering" in sys.argv or "multi_target" in sys.argv, type=str,
-                        help="Path to the clustering dictionary. Needed only if training_type==single_model_clustering or training_type==multi_target")
-
-    args = parser.parse_args()
-    main(args)
-    '''m = keras.models.load_model("single_target/models/unscaled_y/0.0.csv/lstm_neur12-do0.3-ep200-bs12-lr0.005.h5")
-    train = pd.read_csv("single_target/train/0.0.csv")
-    test = pd.read_csv("single_target/test/0.0.csv")
-    _, _, scaler = create_lstm_tensors_minmax(train, None, aggregate_training=None)
-    x, y, _ = create_lstm_tensors_minmax(test, scaler, aggregate_training=None)
-    predictions = m.predict(x)
-    print(predictions)
-    print(y)'''
 
 # python models.py --train_dir multitarget_15_space_BEST/train1 --test_dir multitarget_15_space_BEST/test --file_name multitarget_15_space_BEST/results1.txt --neurons 12 --dropout 0.3 --lr 0.005 --model_folder multitarget_15_space_BEST/models --training_type multi_target --epochs 200
 
