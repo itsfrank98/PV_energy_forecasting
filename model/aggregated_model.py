@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../')
 import keras.models
-from preprocess import create_lstm_tensors_minmax
+from preprocess import create_lstm_tensors
 from models import create_single_target_model, train_model, compute_results
 from tqdm import tqdm
 import os
@@ -17,7 +17,7 @@ def train_models(train_dir, neurons, dropout, model_folder, epochs, lr):
             continue
         fname = f.split('.')[0]
         train = pd.read_csv(os.path.join(train_dir, f))
-        x_train, y_train, scaler = create_lstm_tensors_minmax(train, None, aggregate_training=True)
+        x_train, y_train, scaler = create_lstm_tensors(train, None, aggregate_training=True)
         scalers_dict[fname] = scaler
         model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
         train_model(fname, model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
@@ -30,8 +30,7 @@ def evaluate(model, x_test, y_test, file_name, id):
 
 
 def main(args):
-    f = open("r.txt", 'r+')     # r.txt is a utility file where the results will be reported. Then they will be sorted alphabetically according to the plant IDs and written on the file that the user indicated
-    # Delete the previous content from r.txt
+    f = open("r.txt", 'r+')
     f.seek(0)
     f.truncate()
     f.close()
@@ -55,7 +54,7 @@ def main(args):
             if id == "133.0":
                 continue
             test = pd.read_csv(os.path.join(test_dir, id+'.csv'))
-            x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler, aggregate_training=True)
+            x_test, y_test, _ = create_lstm_tensors(test, scaler, aggregate_training=True)
             model = keras.models.load_model(os.path.join(model_folder, k, "lstm_neur{}-do{}-ep{}-bs12-lr{}.h5".format(neurons, dropout, epochs, lr)))
             evaluate(model, x_test, y_test, "r.txt", id.split('.')[0])
     sort_results("r.txt", file_name)
