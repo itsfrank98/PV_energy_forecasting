@@ -1,3 +1,4 @@
+"""Prepare files for multitarget modelling"""
 import argparse
 import sys
 sys.path.append('../..')
@@ -19,7 +20,7 @@ def prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis):
     vertically
     :return:
     """
-    cols = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+    cols = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17']
     os.makedirs(dst_folder, exist_ok=True)
     clusters_dict = load_from_pickle(path_to_dictionary)
     for k in clusters_dict.keys():
@@ -28,7 +29,7 @@ def prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis):
             if id != "133.0":   # For some reason, the csv corresponding to the plant with id '133.0' wasn't created so we skip this id
                 d = pd.read_csv(data_path + "/" + id + ".csv")
                 d = d[cols]
-                df = pd.concat([df, d], ignore_index=True, axis=axis)
+                df = pd.concat([df, d], ignore_index=True, axis=1)  #PROBABILMENTE AXIS VA LASCIATO A 1 E RIMOSSO DAI PARAMETRI, DATO CHE LA CONCATENAZIONE IN VERTICALE VIENE FATTA DALLA FUNZIONE train_unique_model
         df.to_csv(dst_folder + "/" + str(k) + ".csv")
 
 def main(args):
@@ -48,4 +49,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args)
-    # python multitarget_modeling.py --path_to_dictionary ../../clustering/spatial_clustering/clusters_dict_5.pkl --data_path ../single_target/test --dst_folder ../multitarget_space/5/test --axis 1
+    # python multitarget_prepare.py --path_to_dictionary ../../clustering/spatial_clustering/clusters_dict_6.pkl --data_path ../pvitaly/single_target/test --dst_folder ../pvitaly/multitarget_space/6/test --axis 1

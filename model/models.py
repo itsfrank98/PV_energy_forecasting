@@ -50,20 +50,21 @@ def create_multi_target_model(neurons, dropout, x_train, ids, lr):
     m.compile(loss=losses, optimizer=Adam(learning_rate=lr), loss_weights=loss_weights, metrics=metrics_dict)
     return m
 
-def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, batch_size, x_train, y_train, lr):
+def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, batch_size, x_train, y_train, lr, patience):
     if not os.path.isdir(os.path.join(model_folder)):
         os.mkdir(os.path.join(model_folder))
     callbacks = [
-        EarlyStopping(monitor='val_loss', mode='min', patience=100),
+        EarlyStopping(monitor='val_loss', mode='min', patience=patience),
         ModelCheckpoint(
             monitor='val_loss', save_best_only=True, mode='min',
             filepath=model_folder + '/{}/lstm_neur{}-do{}-ep{}-bs{}-lr{}.h5'.format(id, neurons, dropout, epochs, batch_size, lr))
     ]
-    history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.002, verbose=0,
+    history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.002, verbose=1,
                         shuffle=False, callbacks=callbacks)
     return model, history
 
-def train_separate_models(train_dir, test_dir, model_type, neurons, dropout, model_folder, epochs, lr, y_column, preprocess, clustering_dictionary:dict, step=0):
+def train_separate_models(train_dir, test_dir, model_type, neurons, dropout, model_folder, epochs, lr, y_column, preprocess,
+                          patience, batch_size, clustering_dictionary:dict=None, step=0):
     """
     Function that trains one model for each plant or a multitarget model
     :param train_dir: Directory containing training files
@@ -95,18 +96,19 @@ def train_separate_models(train_dir, test_dir, model_type, neurons, dropout, mod
         x_test, y_test, _ = create_lstm_tensors(test, scaler, preprocess=preprocess, y_column=y_column, step=step)
         if model_type == "single_target":
             model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
+            #model = keras.models.load_model(os.path.join(model_folder, f, "lstm_neur18-do0.3-ep200-bs200-lr0.005.h5"))
         elif model_type == "multi_target":
             model = create_multi_target_model(neurons=neurons, dropout=dropout, x_train=x_train, ids=ids, lr=lr)
 
-        model, hist = train_model(f, model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
-                                  x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr)
+        model, hist = train_model(f, model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
+                                  x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr, patience=patience)
         predictions = model.predict(x_test)
         if model_type == "multi_target":
             test_model_multi(np.vstack(np.array(predictions)), y_test, "r.txt", ids)
         else:
             compute_results(predictions, y_test, "r.txt", ids)
 
-def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column, preprocess):
+def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column, preprocess, patience, batch_size):
     """
     Function that trains a unique model using data coming for all the plants
     """
@@ -118,10 +120,10 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
     x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
 
     model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
-    #model = keras.models.load_model("single_target/unique/lstm_neur12-do0.3-ep200-bs12-lr0.003.h5")
-    model, hist = train_model("unique", model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
-                              x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr)
-    avg = np.mean(y_train)  # Average of the target labels in the training set. It will be used to compute the relative squared error
+    #model = keras.models.load_model("pvitaly/single_model/unique/lstm_neur18-do0.3-ep200-bs200-lr0.005.h5")
+    model, hist = train_model("unique", model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
+                              x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr, patience=patience)
+    #avg = np.mean(y_train)  # Average of the target labels in the training set. It will be used to compute the relative squared error
 
     for f in tqdm(sorted(os.listdir(test_dir))):
         id = f.split('.')[0]
@@ -132,7 +134,7 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
         pred = model.predict(x_test)
         test_model_multi(np.vstack(np.array(pred)), y_test, "r.txt", [id])  # Calculate MAE and RMSE
 
-        # The following is done for computing RSE. Predictions for each plant are stacked in a unique array, as well as the actual values
+    '''    # The following is done for computing RSE. Predictions for each plant are stacked in a unique array, as well as the actual values
         if id == "0":
             predictions = pred
             t = y_test
@@ -142,10 +144,10 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
 
     predictions_avg = np.zeros(predictions.shape[0])+avg
     rse = compute_rse(predictions, predictions_avg, t, "r.txt", id)
-    print(rse)
+    print(rse)'''
 
 
-def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column, preprocess):
+def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column, preprocess, patience, batch_size):
     """Train a separate single target model for each cluster of points"""
     for f in tqdm(sorted(os.listdir(train_dir))):
         if f == ".csv" or f.endswith(".txt"):
@@ -156,8 +158,8 @@ def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_f
         x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
         x_test, y_test, _ = create_lstm_tensors(test, scaler=scaler, y_column=y_column, preprocess=preprocess)
         model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
-        model, hist = train_model(ids, model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
-                                  x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr)
+        model, hist = train_model(ids, model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
+                                  x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr, patience=patience)
         predictions = model.predict(x_test)
         ids_list = ids.split('_')
         test_model_multi(np.vstack(np.array(predictions)), y_test, "r.txt", ids_list)
@@ -194,7 +196,3 @@ def compute_rse(pred, pred_avg, actual, file_name, id):
     '''with open(file_name, 'a') as f:
         f.write("%s: %s \n"%(rse))'''
     return rse
-
-
-# python models.py --train_dir multitarget_15_space_BEST/train1 --test_dir multitarget_15_space_BEST/test --file_name multitarget_15_space_BEST/results1.txt --neurons 12 --dropout 0.3 --lr 0.005 --model_folder multitarget_15_space_BEST/models --training_type multi_target --epochs 200
-

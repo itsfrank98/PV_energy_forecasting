@@ -23,25 +23,40 @@ def main(args):
     training_type = args.training_type
     aggregate_training = args.aggregate_training
     clustering_dictionary = args.clustering_dictionary
+    patience = args.patience
+    batch_size = args.batch_size
 
-    if aggregate_training == True:
-        y_column = 25
+    if train_dir.__contains__("pvitaly"):
+        preprocess = False
+        y_column = 17
+        if training_type == "multi_target":
+            step = 18
+    elif train_dir.__contains__("latiano"):
+        preprocess = True
+        if aggregate_training:
+            y_column = 25
+        else:
+            y_column = 12
+            if training_type == "multi_target":
+                step = 13
     else:
-        y_column = 12
-    os.makedirs(model_folder, exist_ok=True)
+        raise Exception("Invalid dataset")
+    #os.makedirs(model_folder, exist_ok=True)
+
     if training_type == "single_model_clustering":
-        train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, preprocess=True, y_column=y_column)
+        train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column=y_column,
+                                      preprocess=preprocess, patience=patience, batch_size=batch_size)
     elif training_type == "single_model":
-        train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, preprocess=True, y_column=y_column)
+        train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column=y_column,
+                           preprocess=preprocess, patience=patience, batch_size=batch_size)
     elif training_type == "multi_target":
         clustering_dict = load_from_pickle(clustering_dictionary)
         train_separate_models(train_dir=train_dir, test_dir=test_dir, model_type=training_type, neurons=neurons, dropout=dropout,
-                              model_folder=model_folder, epochs=epochs, lr=lr, clustering_dictionary=clustering_dict,
-                              y_column=y_column, step=13, preprocess=True)
+                              model_folder=model_folder, epochs=epochs, lr=lr, y_column=y_column, preprocess=preprocess,
+                              clustering_dictionary=clustering_dict, step=step, patience=patience, batch_size=batch_size)
     elif training_type == "single_target":
         train_separate_models(train_dir=train_dir, test_dir=test_dir, model_type=training_type, neurons=neurons, dropout=dropout,
-                              model_folder=model_folder, epochs=epochs, lr=lr, clustering_dictionary=None,
-                              y_column=y_column, preprocess=True)
+                              model_folder=model_folder, epochs=epochs, lr=lr, preprocess=preprocess, y_column=y_column, patience=patience, batch_size=batch_size)
     sort_results("r.txt", file_name)
 
 
@@ -54,6 +69,8 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, required=True, help="Dropout")
     parser.add_argument("--lr", type=float, required=True, help="Learning rate")
     parser.add_argument("--epochs", type=int, required=True, help="Number of epochs")
+    parser.add_argument("--patience", type=int, required=True, help="Patience")
+    parser.add_argument("--batch_size", type=int, required=True, help="Batch size")
     parser.add_argument("--model_folder", type=str, required=True, help="Folder where the models will be saved")
     parser.add_argument("--training_type", type=str, required=True, help="Type of the model to create. It can either be:\n"
                                                                          " -'single_target' to train one model for each plant\n"

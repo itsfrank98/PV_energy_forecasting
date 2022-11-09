@@ -32,3 +32,5 @@ for f in os.listdir(splitted_dst):
     train.to_csv(os.path.join(train_dir, f))
     test.to_csv(os.path.join(test_dir, f))
 
+# python models.py --train_dir multitarget_15_space_BEST/train1 --test_dir multitarget_15_space_BEST/test --file_name multitarget_15_space_BEST/results1.txt --neurons 12 --dropout 0.3 --lr 0.005 --model_folder multitarget_15_space_BEST/models --training_type multi_target --epochs 200
+
