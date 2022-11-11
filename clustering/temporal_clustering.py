@@ -92,5 +92,4 @@ if __name__ == "__main__":
     main(args)
     '''d = load_from_pickle("dictionary_dtw.pkl")
     create_distance_matrix(d)'''
-# python temporal_clustering.py --n_clusters 40 --distance_mat_path dtw_matrices/distance_matrix_96.pkl --clusters_dict_name temporal_clustering/clusters_dict_40.pkl --linkage average
-
+# python temporal_clustering.py --n_clusters 6 --distance_mat_path temporal_clustering/dtw_matrices/distance_matrix_38.pkl --clusters_dict_path temporal_clustering/clusters_dict_6.pkl --linkage average --v 38 --dataset pvitaly

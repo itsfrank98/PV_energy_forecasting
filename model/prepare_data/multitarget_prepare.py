@@ -26,10 +26,10 @@ def prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis):
     for k in clusters_dict.keys():
         df = pd.DataFrame()
         for id in clusters_dict[k]:
-            if id != "133.0":   # For some reason, the csv corresponding to the plant with id '133.0' wasn't created so we skip this id
+            if id != "133.0":
                 d = pd.read_csv(data_path + "/" + id + ".csv")
                 d = d[cols]
-                df = pd.concat([df, d], ignore_index=True, axis=1)  #PROBABILMENTE AXIS VA LASCIATO A 1 E RIMOSSO DAI PARAMETRI, DATO CHE LA CONCATENAZIONE IN VERTICALE VIENE FATTA DALLA FUNZIONE train_unique_model
+                df = pd.concat([df, d], ignore_index=True, axis=axis)
         df.to_csv(dst_folder + "/" + str(k) + ".csv")
 
 def main(args):

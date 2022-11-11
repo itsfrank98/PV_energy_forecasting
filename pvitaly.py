@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from tqdm import tqdm
-d = pd.read_csv("pv_italy.csv")
+d = pd.read_csv("datasets/pvitaly/pv_italy_hourly.csv")
 d = d[["idsito", "lat", "lon", "data", "kwh"]]
 d = d.sort_values(by ='idsito')
 ids = list(set(d['idsito']))
@@ -12,13 +12,12 @@ windows_dst = "datasets/pvitaly/windows"
 train_dir = "model/pvitaly/single_target/train"
 test_dir = "model/pvitaly/single_target/test"
 # Split the dataset into a separate csv file for every plant
-'''for id in ids:
+for id in ids:
     df_id = d.loc[d['idsito']==id]
     df_id = df_id.sort_values("data")
     df_id = df_id.dropna()
     df_id.to_csv(os.path.join(splitted_dst, str(i)+".csv"))
     i += 1
-'''
 for f in os.listdir(splitted_dst):
     df = pd.read_csv(os.path.join(splitted_dst, f))
     new_df = pd.DataFrame(columns=columns)
@@ -26,7 +25,6 @@ for f in os.listdir(splitted_dst):
         dict = {str(j): df.iloc[i+j]['kwh'] for j in range(18)}  # Create a window of size 18 containing the productions for each hour
         new_df = new_df.append(dict, ignore_index=True)
     test_size = int(len(new_df)*0.2)
-    new_df = new_df.sample(frac=1)   # Shuffle
     train = new_df[:-test_size]
     test = new_df[-test_size:]
     train.to_csv(os.path.join(train_dir, f))
