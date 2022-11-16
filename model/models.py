@@ -46,7 +46,7 @@ def create_multi_target_model(neurons, dropout, x_train, ids, lr):
         output_layers.append(n)
         metrics_dict['output_{}'.format(id)] = [RootMeanSquaredError(), 'mae']
     m = Model(inputs=input, outputs=output_layers)
-    tf.keras.utils.plot_model(m, to_file="/tmp/mod.png", show_shapes=True)
+    tf.keras.utils.plot_model(m, to_file="mod.png", show_shapes=True)
     m.compile(loss=losses, optimizer=Adam(learning_rate=lr), loss_weights=loss_weights, metrics=metrics_dict)
     return m
 
@@ -155,6 +155,8 @@ def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_f
         ids = f.split('.')[0]
         train = pd.read_csv(os.path.join(train_dir, f))
         test = pd.read_csv(os.path.join(test_dir, f))
+        if len(train) == 0:
+            continue
         x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
         x_test, y_test, _ = create_lstm_tensors(test, scaler=scaler, y_column=y_column, preprocess=preprocess)
         model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)

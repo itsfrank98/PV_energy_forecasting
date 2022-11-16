@@ -95,4 +95,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     main(args)
 
-# python spatial_clustering.py --n_clusters 40 --distance_mat_path spatial_clustering/distance_mat.pkl --clusters_dict_name spatial_clustering/clusters_dict_40.pkl --linkage average --load True
+# python spatial_clustering.py --n_clusters 4 --distance_mat_path spatial_clustering/distance_mat.pkl --clusters_dict_name spatial_clustering/clusters_dict_4.pkl --linkage average --dataset pvitaly --load True

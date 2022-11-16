@@ -31,7 +31,6 @@ def create_lstm_tensors(df, scaler, y_column, step=0, preprocess=True):
         y_columns = np.arange(start=y_column, stop=data.shape[1]+1, step=step)    # Every _step_ columns we have the value of the target variable
 
     x_columns = [c for c in columns if c not in y_columns]
-
     if preprocess:
         if not scaler:
             scaler = MinMaxScaler(feature_range=(0,1))

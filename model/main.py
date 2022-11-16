@@ -1,9 +1,9 @@
 import sys
 sys.path.append('../')
 import argparse
-import os
 from utils import load_from_pickle, sort_results
 from model.models import train_single_model_clustering, train_unique_model, train_separate_models
+import os
 
 def main(args):
     f = open("r.txt", 'r+')     # r.txt is a utility file where the results will be reported. Then they will be sorted alphabetically according to the plant IDs and written on the file that the user indicated
@@ -41,7 +41,7 @@ def main(args):
                 step = 13
     else:
         raise Exception("Invalid dataset")
-    #os.makedirs(model_folder, exist_ok=True)
+    os.makedirs(model_folder, exist_ok=True)
 
     if training_type == "single_model_clustering":
         train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column=y_column,

@@ -1,12 +1,15 @@
 """Prepare files for multitarget modelling"""
 import argparse
 import sys
+
+import numpy as np
+
 sys.path.append('../..')
 from utils import load_from_pickle
 import os
 import pandas as pd
 
-def prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis):
+def prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis, cols):
     """
     Groups together the series concerning the plants that were clustered together, and saves them in separate files
     :param path_to_dictionary: Path to the dictionary having as keys the cluster IDs and as values the list of IDs of
@@ -18,9 +21,11 @@ def prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis):
     requires the series coming from the same plant cluster to be concatenated horizontally. If instead we are preparing
     data for training a single target model with series coming from all the plants in the cluster, they will be stacked
     vertically
+    :param cols: List of the columns
     :return:
     """
-    cols = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17']
+    #cols = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+    #cols = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17']
     os.makedirs(dst_folder, exist_ok=True)
     clusters_dict = load_from_pickle(path_to_dictionary)
     for k in clusters_dict.keys():
@@ -34,17 +39,26 @@ def prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis):
 
 def main(args):
     path_to_dictionary = args.path_to_dictionary
-    data_path = args.data_path
+    train_data_path = args.train_data_path
+    testing_data_path = args.testing_data_path
+    number_of_columns = args.number_of_columns
     dst_folder = args.dst_folder
     axis = args.axis
-    prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis)
+
+    columns = [str(c) for c in np.arange(number_of_columns)]
+    dst_folder_train = "{}/train".format(dst_folder)
+    dst_folder_test = "{}/test".format(dst_folder)
+    prepare_data_multitarget(path_to_dictionary, train_data_path, dst_folder_train, axis, columns)
+    prepare_data_multitarget(path_to_dictionary, testing_data_path, dst_folder_test, axis, columns)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--path_to_dictionary", type=str, required=True, help="Path to the clustering dictionary")
-    parser.add_argument("--data_path", type=str, required=True, help="Path to the directory containing data to be aggregated")
-    parser.add_argument("--dst_folder", type=str, required=True, help="Path to the destination directory")
+    parser.add_argument("--train_data_path", type=str, required=True, help="Path to the single target train data directory")
+    parser.add_argument("--testing_data_path", type=str, required=True, help="Path to the single target test data directory")
+    parser.add_argument("--dst_folder", type=str, required=True, help="Path to the directory where the aggregated datasets will be saved")
+    parser.add_argument("--number_of_columns", type=int, required=False, help="Number of columns in the dataset")
     parser.add_argument("--axis", type=int, choices=[0, 1], help="Set this to 0 for vertically concatenating the rows. Set this to 1 for horizontally concatenating the rows.")
 
     args = parser.parse_args()

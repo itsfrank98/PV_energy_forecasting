@@ -1,30 +1,27 @@
 import os
 import sys
-
 import pandas as pd
-
 sys.path.append('../')
 import arff
 from dtaidistance import dtw
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering
 from sklearn_extra.cluster import KMedoids
-import pickle
 from tqdm import tqdm
 from utils import save_to_pickle, load_from_pickle
 from spatial_clustering import create_clusters_dict
 import argparse
 
-def create_latiano_dictionary():
+def create_latiano_dictionary(n):
     d = {}
     current_index = ""
-    for row in arff.load("Fumagalli 8fold CV/train_2019.arff"):
+    for row in arff.load("../datasets/Fumagalli 8fold CV/train_2019.arff"):
         index = row[0]
         if index != current_index:
             d[index] = []  # List where we put all the energy values registered by a plant each month from 2011 to 2018
             current_index = index
         d[index].append(row[41])
-    save_to_pickle("dictionary_dtw.pkl", d)
+    save_to_pickle("../latiano/clustering/dictionary_dtw_{}.pkl".format(n), d)
 
 def create_dictionary_dtw_pvitaly(v):
     """
@@ -61,10 +58,10 @@ def main(args):
     dataset = args.dataset
 
     if dataset == "latiano":
-        create_latiano_dictionary()
+        create_latiano_dictionary(v)
     elif dataset == "pvitaly":
         create_dictionary_dtw_pvitaly(v)
-    dictionary_dtw = load_from_pickle("dictionary_dtw_{}.pkl".format(v))
+    dictionary_dtw = load_from_pickle("../latiano/clustering/dictionary_dtw_{}.pkl".format(v))
     create_distance_matrix(dictionary_dtw, distance_mat_path)
     distance_mat = load_from_pickle(distance_mat_path)
     clustering_model = AgglomerativeClustering(n_clusters=n_clusters, affinity='precomputed', linkage=linkage)
