@@ -3,24 +3,43 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import argparse
 from prepare_data.single_dataset import prepare_data_single_dataset
-from prepare_data.multitarget_modeling import prepare_data_multitarget
+from prepare_data.multitarget_prepare import prepare_data_multitarget
 
 
-def create_lstm_tensors_minmax(df, scaler, aggregate_training):
+def create_lstm_tensors(df, scaler, y_column, step=0, preprocess=True):
+    """
+    Function that creates the tensors that will be used by the model for training and testing
+    :param df: Dataframe with the data
+    :param scaler: Scaler to use in order to resize data to the desired range. When creating the tensors for training, it must be None and the function will create one.
+    When creating the tensors for testing, we must pass the scaler that was created for the training data
+    :param aggregate_training: Set this to true is we are performing aggregated training. It consists in concatenating each training row to another row with the same
+    length having as values the average features values computed for the elements that fall in the same cluster
+    :param y_column: Index of the column containing the target value
+    :param step: If we are doing multitarget training, there are multiple target columns. The step parameter together with y_column allows the function to automatically
+    discover the target columns given the first one. For example suppose we have 12 features with index 0-11, and the target feature is the last. Then y_column=11.
+    If performing multitarget modeling, then the rows will be concatenated and the targets will be found every 12 columns. So step=12. If not performing multitarget modelling,
+    leave this parameter to the default value since it won't be used
+    :param preprocess: Set this to true if you want to perform preprocessing. Set to false if you want the values to be left as they are
+    :return: x and y tensors, the scaler to use to scale testing data
+    """
     #df = df[['Unnamed: 0', '0m', '0', '1m', '1', '2m', '2', '3m', '3', '4m', '4', '5m', '5', '6m', '6', '7m', '7', '8m', '8', '9m', '9', '10m', '10', '11m', '11', '12']]
     data = df.values[:, 1:]
     columns = np.arange(start=0, stop=data.shape[1])
-    y_columns = np.arange(start=12, stop=data.shape[1]+1, step=13)    # Every 12 columns we have the value of the target variable
-    if aggregate_training:
-        y_columns = [25]
-    x_columns = [c for c in columns if c not in y_columns]
-
-    if not scaler:
-        scaler = MinMaxScaler(feature_range=(0,1))
-        scaled = scaler.fit_transform(data)
+    if step == 0:
+        y_columns = [y_column]
     else:
-        scaled = scaler.transform(data)
-    x, y = scaled[:, x_columns], scaled[:, y_columns]
+        y_columns = np.arange(start=y_column, stop=data.shape[1]+1, step=step)    # Every _step_ columns we have the value of the target variable
+
+    x_columns = [c for c in columns if c not in y_columns]
+    if preprocess:
+        if not scaler:
+            scaler = MinMaxScaler(feature_range=(0,1))
+            data = scaler.fit_transform(data)
+        else:
+            data = scaler.transform(data)
+    else:
+        scaler = None
+    x, y = data[:, x_columns], data[:, y_columns]
     x = x.reshape(x.shape[0], x.shape[1], 1)
     y_flat = []
     for i in range(y.shape[0]):
@@ -28,8 +47,9 @@ def create_lstm_tensors_minmax(df, scaler, aggregate_training):
             y_flat.append(y[i, j])
     y_flat = np.array(y_flat)
     y_flat = y_flat.reshape(y_flat.shape[0], 1)
+
     # If we are testing we need to deal with the out of range values also in the x
-    if scaler:
+    if preprocess and scaler:
         x[x<0] = 0
         x[x>1] = 1
         y_flat[y_flat<0] = 0

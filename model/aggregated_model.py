@@ -1,7 +1,8 @@
+"""Model having as dataset the one where there are the features and the means of the features in the same cluster"""
 import sys
 sys.path.append('../')
 import keras.models
-from preprocess import create_lstm_tensors_minmax
+from preprocess import create_lstm_tensors
 from models import create_single_target_model, train_model, compute_results
 from tqdm import tqdm
 import os
@@ -10,19 +11,24 @@ from utils import sort_results
 import argparse
 from utils import load_from_pickle
 
-def train_models(train_dir, neurons, dropout, model_folder, epochs, lr):
-    scalers_dict = {}
-    for f in tqdm(sorted(os.listdir(train_dir))):
+def train_and_test_models(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, preprocess, y_column, batch_size, patience, clustering_dict):
+    train = pd.DataFrame()
+    for f in sorted(os.listdir(train_dir)):
         if f == ".csv" or f.endswith(".txt"):
             continue
-        fname = f.split('.')[0]
-        train = pd.read_csv(os.path.join(train_dir, f))
-        x_train, y_train, scaler = create_lstm_tensors_minmax(train, None, aggregate_training=True)
-        scalers_dict[fname] = scaler
-        model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
-        train_model(fname, model_folder=model_folder, model=model, epochs=epochs, batch_size=12,
-                    x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr)
-    return scalers_dict     # We don't return the trained models since they're saved in the directory
+        train = pd.concat((train, pd.read_csv(os.path.join(train_dir, f))))
+    x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
+    #model = keras.models.load_model("../latiano/multitarget_vertical/time/20/models/unique_aggregate/lstm_neur12-do0.3-ep200-bs100-lr0.005.h5")
+    model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
+    model, hist = train_model("unique_aggregate", model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
+                x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr, patience=patience)
+
+    # Test the model on all the plants that are in the cluster covered by the model
+    for f in sorted(os.listdir(test_dir)):
+        test = pd.read_csv(os.path.join(test_dir, f))
+        x_test, y_test, _ = create_lstm_tensors(df=test, scaler=scaler, preprocess=preprocess, y_column=y_column)
+        evaluate(model, x_test, y_test, "r.txt", f)
+
 
 def evaluate(model, x_test, y_test, file_name, id):
     predictions = model.predict(x_test)
@@ -30,8 +36,7 @@ def evaluate(model, x_test, y_test, file_name, id):
 
 
 def main(args):
-    f = open("r.txt", 'r+')     # r.txt is a utility file where the results will be reported. Then they will be sorted alphabetically according to the plant IDs and written on the file that the user indicated
-    # Delete the previous content from r.txt
+    f = open("r.txt", 'r+')
     f.seek(0)
     f.truncate()
     f.close()
@@ -44,20 +49,18 @@ def main(args):
     lr = args.lr
     epochs = args.epochs
     model_folder = args.model_folder
+    batch_size = args.batch_size
+    patience = args.patience
     clustering_dict_path = args.clustering_dict_path
+    preprocess = args.preprocess
+    y_column = args.y_column
     clustering_dict = load_from_pickle(clustering_dict_path)
-
-    scalers_dict = train_models(train_dir=train_dir, neurons=neurons, dropout=dropout, model_folder=model_folder, epochs=epochs, lr=lr)
-    for k in scalers_dict.keys():
-        scaler = scalers_dict[k]
-        ids = clustering_dict[int(k)]
-        for id in ids:
-            if id == "133.0":
-                continue
-            test = pd.read_csv(os.path.join(test_dir, id+'.csv'))
-            x_test, y_test, _ = create_lstm_tensors_minmax(test, scaler, aggregate_training=True)
-            model = keras.models.load_model(os.path.join(model_folder, k, "lstm_neur{}-do{}-ep{}-bs12-lr{}.h5".format(neurons, dropout, epochs, lr)))
-            evaluate(model, x_test, y_test, "r.txt", id.split('.')[0])
+    if preprocess == 0:
+        prep = False
+    else:
+        prep = True
+    train_and_test_models(train_dir=train_dir, test_dir=test_dir, neurons=neurons, dropout=dropout, model_folder=model_folder, epochs=epochs, lr=lr,
+                          batch_size=batch_size, patience=patience, preprocess=prep, y_column=y_column, clustering_dict=clustering_dict)
     sort_results("r.txt", file_name)
 
 
@@ -70,8 +73,11 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, required=True, help="Dropout")
     parser.add_argument("--lr", type=float, required=True, help="Learning rate")
     parser.add_argument("--epochs", type=int, required=True, help="Number of epochs")
+    parser.add_argument("--batch_size", type=int, required=True, help="Batch size")
+    parser.add_argument("--patience", type=int, required=True, help="Patience")
     parser.add_argument("--model_folder", type=str, required=True, help="Folder where the models will be saved")
     parser.add_argument("--clustering_dict_path", required=True, type=str, help="Path to the clustering dictionary." )
-
+    parser.add_argument("--preprocess", type=int, required=True, help="1 to perform feature scaling, 0 to not perform it", choices=[0, 1])
+    parser.add_argument("--y_column", required=True, type=int, help="Name of the column having the target variable")
     args = parser.parse_args()
     main(args)
