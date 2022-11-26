@@ -8,8 +8,7 @@ import numpy as np
 from sklearn.cluster import AgglomerativeClustering
 from sklearn_extra.cluster import KMedoids
 from tqdm import tqdm
-from utils import save_to_pickle, load_from_pickle
-from spatial_clustering import create_clusters_dict
+from utils import save_to_pickle, load_from_pickle, create_clusters_dict
 import argparse
 
 def create_latiano_dictionary(n):

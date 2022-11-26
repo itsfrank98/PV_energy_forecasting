@@ -21,42 +21,38 @@ def main(args):
     epochs = args.epochs
     model_folder = args.model_folder
     training_type = args.training_type
-    aggregate_training = args.aggregate_training
-    clustering_dictionary = args.clustering_dictionary
+    clustering_dictionary = args.clustering_dict_path
     patience = args.patience
     batch_size = args.batch_size
+    y_column = args.y_column
+    preprocess = args.preprocess
 
-    if train_dir.__contains__("pvitaly"):
-        preprocess = False
-        y_column = 17
-        if training_type == "multi_target":
-            step = 18
-    elif train_dir.__contains__("latiano"):
-        preprocess = True
-        if aggregate_training:
-            y_column = 25
-        else:
-            y_column = 12
-            if training_type == "multi_target":
-                step = 13
+    if preprocess == 0:
+        prep = False
     else:
-        raise Exception("Invalid dataset")
+        prep = True
+
+    if training_type == "multi_target":
+        if train_dir.__contains__("pvitaly"):
+            step = 18
+        elif train_dir.__contains__("latiano"):
+            step = 13
     os.makedirs(model_folder, exist_ok=True)
 
     if training_type == "single_model_clustering":
         train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column=y_column,
-                                      preprocess=preprocess, patience=patience, batch_size=batch_size)
+                                      preprocess=prep, patience=patience, batch_size=batch_size)
     elif training_type == "single_model":
         train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column=y_column,
-                           preprocess=preprocess, patience=patience, batch_size=batch_size)
+                           preprocess=prep, patience=patience, batch_size=batch_size)
     elif training_type == "multi_target":
         clustering_dict = load_from_pickle(clustering_dictionary)
         train_separate_models(train_dir=train_dir, test_dir=test_dir, model_type=training_type, neurons=neurons, dropout=dropout,
-                              model_folder=model_folder, epochs=epochs, lr=lr, y_column=y_column, preprocess=preprocess,
+                              model_folder=model_folder, epochs=epochs, lr=lr, y_column=y_column, preprocess=prep,
                               clustering_dictionary=clustering_dict, step=step, patience=patience, batch_size=batch_size)
     elif training_type == "single_target":
         train_separate_models(train_dir=train_dir, test_dir=test_dir, model_type=training_type, neurons=neurons, dropout=dropout,
-                              model_folder=model_folder, epochs=epochs, lr=lr, preprocess=preprocess, y_column=y_column, patience=patience, batch_size=batch_size)
+                              model_folder=model_folder, epochs=epochs, lr=lr, preprocess=prep, y_column=y_column, patience=patience, batch_size=batch_size)
     sort_results("r.txt", file_name)
 
 
@@ -78,8 +74,9 @@ if __name__ == "__main__":
                                                                          " -'single_model' to train a unique model with data coming from all the plants\n"
                                                                          " -'single_model_clustering' to train, for each cluster of plants, a unique model with data coming from all the plants in that cluster",
                         choices=['single_target', 'multi_target', 'single_model', 'single_model_clustering'])
-    parser.add_argument("--aggregate_training", required=False, type=bool, help="Set this to true if you are training on the aggregated dataset")
-    parser.add_argument("--clustering_dictionary", required="--argument" in sys.argv or "single_model_clustering" in sys.argv or "multi_target" in sys.argv, type=str,
+    parser.add_argument("--preprocess", type=int, required=True, help="1 to perform feature scaling, 0 to not perform it", choices=[0, 1])
+    parser.add_argument("--y_column", required=True, type=int, help="Name of the column having the target variable")
+    parser.add_argument("--clustering_dict_path", required="--argument" in sys.argv or "single_model_clustering" in sys.argv or "multi_target" in sys.argv, type=str,
                         help="Path to the clustering dictionary. Needed only if training_type==single_model_clustering or training_type==multi_target")
 
     args = parser.parse_args()

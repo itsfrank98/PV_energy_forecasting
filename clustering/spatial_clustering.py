@@ -41,16 +41,6 @@ def create_distance_matrix(d, dst_path):
     save_to_pickle(dst_path, distance_mat)
 
 
-# Plot inertia for each k in order to find the best number of clusters with the elbow method
-'''def plot_inertia(n_clusters, inertias):
-    figure = plt.figure(1)
-    ax = figure.add_subplot(111)
-    ax.plot(range(1, len(n_clusters)+1), inertias, color='b', marker='.')
-    ax.grid(True)
-    plt.ylabel("Silhouette")
-    plt.xlabel("K")
-    plt.show()'''
-
 def main(args):
     n_clusters = args.n_clusters
     distance_mat_path = args.distance_mat_path
@@ -88,7 +78,7 @@ if __name__ == '__main__':
     parser.add_argument("--clusters_dict_name", type=str, required=True, help="How the clusters' dictionary will be saved")
     parser.add_argument("--linkage", type=str, required=True, help="Linkage type")  #average
     parser.add_argument("--load", type=bool, required=False, help="Whether to load the distance matrix or create a new one")
-    parser.add_argument("--dataset", type=str, required=False, help="Name of the dataset on which clustering ill be performed. It can either be 'latiano' or 'pvitaly'."
+    parser.add_argument("--dataset", type=str, required=False, help="Name of the dataset on which clustering will be performed. It can either be 'latiano' or 'pvitaly'."
                                                                     "If you already have the distance matrix and don't want it to be computed again, you can ignore this argument",
                         choices=['latiano', 'pvitaly'])
 

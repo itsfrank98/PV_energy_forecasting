@@ -1,7 +1,9 @@
 import numpy as np
-from utils import load_from_pickle, save_to_pickle
 from sklearn.metrics import silhouette_samples
 import argparse
+import sys
+sys.path.append("..")
+from utils import load_from_pickle, save_to_pickle
 
 
 def point_consensus(spatial_labels, temporal_labels):
@@ -21,7 +23,7 @@ def point_consensus(spatial_labels, temporal_labels):
             value = 0
             if (spatial_labels[i] == spatial_labels[j]) != (temporal_labels[i] == temporal_labels[j]):  # Simulation of XOR. Case in which the two points are clustered together by only one of the clustering models
                 value = 1
-            if spatial_labels[i] == spatial_labels[j] and temporal_labels[i] == temporal_labels[j]:
+            elif spatial_labels[i] == spatial_labels[j] and temporal_labels[i] == temporal_labels[j]:
                 value = 2
             consensus_matrix[i, j] = value
             consensus_matrix[j, i] = value
@@ -135,7 +137,8 @@ def compute_mi_matrix(spatial_labels, temporal_labels):
 def main(args):
     spatial_clustering_path = args.spatial_path
     temp_clustering_path = args.temporal_path
-    months = temp_clustering_path.split("/")[2].split("_")[0]
+    n_clusters_space = spatial_clustering_path.split("/")[3].split(".")[0]
+    n_clusters_time = temp_clustering_path.split("/")[3].split(".")[0]
     technique = args.technique
     dst = args.dst
     spatial_clustering = load_from_pickle(spatial_clustering_path)
@@ -160,17 +163,18 @@ def main(args):
         adj_matrix = compute_mi_matrix(spatial_labels, temporal_labels)
     else:
         raise ValueError("ERROR: Invalid technique")
-    save_to_pickle("{}/{}_{}.pkl".format(dst, technique, months), adj_matrix)
+    save_to_pickle("{}/{}_{}s{}t.pkl".format(dst, technique, n_clusters_space, n_clusters_time), adj_matrix)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--spatial_path", type=str, required=True, help="Path to the pickle file containing the spatial clustering")
     parser.add_argument("--temporal_path", type=str, required=True, help="Path to the pickle file containing the temporal clustering")
-    parser.add_argument("--technique", type=str, required=True, help="Technique to use to merge the clusterings")
+    parser.add_argument("--technique", type=str, required=True, help="Technique to use to merge the clusterings. Can be consensus, modularity, mi, silhouette",
+                        choices=["consensus", "modularity", "mi", "silhouette"])
     parser.add_argument("--spatial_dist_mat", type=str, required=False, help="Path to the file containing the spatial clustering adjacency matrix. This parameter is used only if the technique is 'silhouette'")
     parser.add_argument("--temporal_dist_mat", type=str, required=False, help="Path to the file containing the temporal clustering adjacency matrix. This parameter is used only if the technique is 'silhouette'")
     parser.add_argument("--dst", type=str, required=True)
     args = parser.parse_args()
-    main(args)
+    #main(args)
 
