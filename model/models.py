@@ -106,7 +106,9 @@ def train_separate_models(train_dir, test_dir, model_type, neurons, dropout, mod
         if model_type == "multi_target":
             test_model_multi(np.vstack(np.array(predictions)), y_test, "r.txt", ids)
         else:
-            compute_results(predictions, y_test, "r.txt", ids)
+            avg = np.mean(y_train)
+            predictions_avg = np.zeros(predictions.shape[0])+avg
+            compute_results(predictions, y_test, predictions_avg, "r.txt", ids)
 
 def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column, preprocess, patience, batch_size):
     """
@@ -123,7 +125,7 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
     #model = keras.models.load_model("pvitaly/single_model/unique/lstm_neur18-do0.3-ep200-bs200-lr0.005.h5")
     model, hist = train_model("unique", model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
                               x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr, patience=patience)
-    #avg = np.mean(y_train)  # Average of the target labels in the training set. It will be used to compute the relative squared error
+    avg = np.mean(y_train)  # Average of the target labels in the training set. It will be used to compute the relative squared error
 
     for f in tqdm(sorted(os.listdir(test_dir))):
         id = f.split('.')[0]
@@ -132,9 +134,6 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
         test = pd.read_csv(os.path.join(test_dir, f))
         x_test, y_test, _ = create_lstm_tensors(test, scaler=scaler, y_column=y_column, preprocess=preprocess)
         pred = model.predict(x_test)
-        test_model_multi(np.vstack(np.array(pred)), y_test, "r.txt", [id])  # Calculate MAE and RMSE
-
-    '''    # The following is done for computing RSE. Predictions for each plant are stacked in a unique array, as well as the actual values
         if id == "0":
             predictions = pred
             t = y_test
@@ -143,8 +142,7 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
             t = np.vstack((t, y_test))
 
     predictions_avg = np.zeros(predictions.shape[0])+avg
-    rse = compute_rse(predictions, predictions_avg, t, "r.txt", id)
-    print(rse)'''
+    compute_results(predictions, t, predictions_avg, "r.txt", "UNIQUE")
 
 
 def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column, preprocess, patience, batch_size):
@@ -152,7 +150,7 @@ def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_f
     for f in tqdm(sorted(os.listdir(train_dir))):
         if f == ".csv" or f.endswith(".txt"):
             continue
-        ids = f.split('.')[0]
+        id = f.split('.')[0]
         train = pd.read_csv(os.path.join(train_dir, f))
         test = pd.read_csv(os.path.join(test_dir, f))
         if len(train) == 0:
@@ -160,41 +158,29 @@ def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_f
         x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
         x_test, y_test, _ = create_lstm_tensors(test, scaler=scaler, y_column=y_column, preprocess=preprocess)
         model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
-        model, hist = train_model(ids, model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
+        model, hist = train_model(id, model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
                                   x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr, patience=patience)
         predictions = model.predict(x_test)
-        ids_list = ids.split('_')
-        test_model_multi(np.vstack(np.array(predictions)), y_test, "r.txt", ids_list)
+        avg = np.mean(y_train)
+        predictions_avg = np.zeros(predictions.shape[0])+avg
+        compute_results(np.vstack(np.array(predictions)), y_test, predictions_avg, "r.txt", id)
 
 
-def compute_results(predictions, y_test, file_name, id):
+def compute_results(predictions, y_test, pred_avg, file_name, id):
     """
     Function that calculates the evaluation metrics and writes the results on a file
     """
     rmse = np.sqrt(mean_squared_error(y_true=y_test, y_pred=predictions))
     mae = mean_absolute_error(y_true=y_test, y_pred=predictions)
+    rse = compute_rse(predictions, pred_avg, y_test)
     with open(file_name, 'a') as f:
-        f.write("%s: %s  %s\n"%(id, mae, rmse))
+        f.write("%s: %s  %s  %s\n"%(id, mae, rmse, rse))
 
-def test_model_multi(predictions, y_test, file_name, ids):
-    """
-    :param predictions: Predictions of the model
-    :param y_test: Actual values
-    :param file_name: Name on the file where the results will be written
-    :param ids: IDs of the plants that the model considers.
-    """
-    j = 0
-    for i in range(len(ids)):
-        compute_results(predictions[j:j+12, :], y_test[j:j+12, :], file_name, ids[i])
-        j += 12
-
-def compute_rse(pred, pred_avg, actual, file_name, id):
+def compute_rse(pred, pred_avg, actual):
     """
     Computes the residual squared error
     """
     sem = np.sum(pred - actual)**2
     sea = np.sum(actual - pred_avg)**2
     rse = sem / sea
-    '''with open(file_name, 'a') as f:
-        f.write("%s: %s \n"%(rse))'''
     return rse
