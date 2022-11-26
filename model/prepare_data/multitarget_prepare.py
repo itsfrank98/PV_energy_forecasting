@@ -44,10 +44,12 @@ def main(args):
     number_of_columns = args.number_of_columns
     dst_folder = args.dst_folder
     axis = args.axis
-
+    model_type = args.model_type
+    n_clusters = path_to_dictionary.split('/')[-1].split('.')[0].split('_')[-1]
     columns = [str(c) for c in np.arange(number_of_columns)]
-    dst_folder_train = "{}/train".format(dst_folder)
-    dst_folder_test = "{}/test".format(dst_folder)
+    c = path_to_dictionary.split("/")[-1].split("_")[0]
+    dst_folder_train = "{}/{}/{}_{}/train".format(dst_folder, n_clusters, model_type, c)
+    dst_folder_test = "{}/{}/{}_{}/test".format(dst_folder, n_clusters, model_type, c)
     prepare_data_multitarget(path_to_dictionary, train_data_path, dst_folder_train, axis, columns)
     prepare_data_multitarget(path_to_dictionary, testing_data_path, dst_folder_test, axis, columns)
 

@@ -53,7 +53,6 @@ def main(args):
     testing_data_path = args.testing_data_path
     s = args.s
     path_to_dictionary = args.path_to_dictionary
-    print(path_to_dictionary)
     clustering_dict = load_from_pickle(path_to_dictionary)
     n_of_cols = args.number_of_columns
     n_clusters = path_to_dictionary.split('/')[-1].split('.')[0].split('_')[-1]
@@ -91,4 +90,4 @@ if __name__ =="__main__":
 
     args = parser.parse_args()
     main(args)
-#python aggregated.py --train_data_path ../single_target/train/ --s time --path_to_dictionary ../../clustering/spatial_clustering/clusters_dict_10_aggl.pkl
+#python aggregate.py --train_data_path ../single_target/train/ --s time --path_to_dictionary ../../clustering/spatial_clustering/clusters_dict_10_aggl.pkl

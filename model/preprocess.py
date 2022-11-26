@@ -2,7 +2,7 @@ import os
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import argparse
-from prepare_data.single_dataset import prepare_data_single_dataset
+from prepare_data.split_original_dataset import prepare_data_single_dataset
 from prepare_data.multitarget_prepare import prepare_data_multitarget
 
 

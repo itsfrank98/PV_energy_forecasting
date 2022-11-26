@@ -5,6 +5,7 @@ def save_to_pickle(name, c):
     with open(name, 'wb') as f:
         pickle.dump(c, f)
 
+
 def load_from_pickle(name):
     with open(name, 'rb') as f:
         return pickle.load(f)
@@ -40,13 +41,13 @@ def sort_results(unsorted_file_path, sorted_file_path):
                 #a = float(d[1])
                 #s1 += a
                 #dic[k] = a
-                mae, rmse = float(d[1]), float(d[2])
+                mae, rmse, rse = float(d[1]), float(d[2]), float(d[3])
                 s1 += mae
                 s2 += rmse
-                dic[k] = (mae, rmse)
+                dic[k] = (mae, rmse, rse)
         f.close()
     with open(sorted_file_path, 'w') as f:
-        f.write("      MAE         RMSE\n")
+        f.write("      MAE         RMSE             RSE\n")
         for k in sorted(dic.keys()):
             f.write("{}:  {}\n".format(k, dic[k]))
         f.write("AVG:  {}  {}".format(s1/len(dic.keys()), s2/len(dic.keys())))
