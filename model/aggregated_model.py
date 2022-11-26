@@ -1,23 +1,22 @@
 """Model having as dataset the one where there are the features and the means of the features in the same cluster"""
-import sys
-sys.path.append('../')
-import keras.models
 from preprocess import create_lstm_tensors
 from models import create_single_target_model, train_model, compute_results
-from tqdm import tqdm
 import os
 import pandas as pd
-from utils import sort_results
 import argparse
-from utils import load_from_pickle
+import sys
+sys.path.append('../')
+from utils import sort_results, load_from_pickle
 
-def train_and_test_models(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, preprocess, y_column, batch_size, patience, clustering_dict):
+
+def train_and_test_models(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, preprocess, y_column, batch_size, patience):
     train = pd.DataFrame()
     for f in sorted(os.listdir(train_dir)):
         if f == ".csv" or f.endswith(".txt"):
             continue
         train = pd.concat((train, pd.read_csv(os.path.join(train_dir, f))))
     x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
+
     #model = keras.models.load_model("../latiano/multitarget_vertical/time/20/models/unique_aggregate/lstm_neur12-do0.3-ep200-bs100-lr0.005.h5")
     model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
     model, hist = train_model("unique_aggregate", model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
@@ -36,7 +35,7 @@ def evaluate(model, x_test, y_test, file_name, id):
 
 
 def main(args):
-    f = open("r.txt", 'r+')
+    f = open("model/r.txt", 'r+')
     f.seek(0)
     f.truncate()
     f.close()
@@ -60,7 +59,7 @@ def main(args):
     else:
         prep = True
     train_and_test_models(train_dir=train_dir, test_dir=test_dir, neurons=neurons, dropout=dropout, model_folder=model_folder, epochs=epochs, lr=lr,
-                          batch_size=batch_size, patience=patience, preprocess=prep, y_column=y_column, clustering_dict=clustering_dict)
+                          batch_size=batch_size, patience=patience, preprocess=prep, y_column=y_column)
     sort_results("r.txt", file_name)
 
 
