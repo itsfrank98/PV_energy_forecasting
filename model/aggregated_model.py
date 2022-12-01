@@ -4,6 +4,7 @@ from models import create_single_target_model, train_model, compute_results
 import os
 import pandas as pd
 import argparse
+import numpy as np
 import sys
 sys.path.append('../')
 from utils import sort_results, load_from_pickle
@@ -17,25 +18,28 @@ def train_and_test_models(train_dir, test_dir, neurons, dropout, model_folder, e
         train = pd.concat((train, pd.read_csv(os.path.join(train_dir, f))))
     x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
 
-    #model = keras.models.load_model("../latiano/multitarget_vertical/time/20/models/unique_aggregate/lstm_neur12-do0.3-ep200-bs100-lr0.005.h5")
+    #model = keras.models.load_model("../latiano/feature_augmented/time/20/models/unique_aggregate/lstm_neur12-do0.3-ep200-bs100-lr0.005.h5")
     model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
     model, hist = train_model("unique_aggregate", model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
                 x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr, patience=patience)
+    avg = np.mean(y_train)
 
     # Test the model on all the plants that are in the cluster covered by the model
     for f in sorted(os.listdir(test_dir)):
         test = pd.read_csv(os.path.join(test_dir, f))
         x_test, y_test, _ = create_lstm_tensors(df=test, scaler=scaler, preprocess=preprocess, y_column=y_column)
-        evaluate(model, x_test, y_test, "r.txt", f)
+        evaluate(model=model, x_test=x_test, y_test=y_test, avg=avg, file_name="r.txt", id=f)
 
 
-def evaluate(model, x_test, y_test, file_name, id):
+def evaluate(model, x_test, y_test, avg, file_name, id):
     predictions = model.predict(x_test)
-    compute_results(predictions=predictions, y_test=y_test, file_name=file_name, id=id)
+    predictions_avg = np.zeros(predictions.shape[0])+avg
+    predictions_avg = np.expand_dims(predictions_avg, axis=1)
+    compute_results(predictions=predictions, y_test=y_test, pred_avg=predictions_avg, file_name=file_name, id=id)
 
 
 def main(args):
-    f = open("model/r.txt", 'r+')
+    f = open("r.txt", 'r+')
     f.seek(0)
     f.truncate()
     f.close()
@@ -50,10 +54,10 @@ def main(args):
     model_folder = args.model_folder
     batch_size = args.batch_size
     patience = args.patience
-    clustering_dict_path = args.clustering_dict_path
+    #clustering_dict_path = args.clustering_dict_path
     preprocess = args.preprocess
     y_column = args.y_column
-    clustering_dict = load_from_pickle(clustering_dict_path)
+    #clustering_dict = load_from_pickle(clustering_dict_path)
     if preprocess == 0:
         prep = False
     else:
@@ -75,7 +79,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, required=True, help="Batch size")
     parser.add_argument("--patience", type=int, required=True, help="Patience")
     parser.add_argument("--model_folder", type=str, required=True, help="Folder where the models will be saved")
-    parser.add_argument("--clustering_dict_path", required=True, type=str, help="Path to the clustering dictionary." )
+    #parser.add_argument("--clustering_dict_path", required=True, type=str, help="Path to the clustering dictionary." )
     parser.add_argument("--preprocess", type=int, required=True, help="1 to perform feature scaling, 0 to not perform it", choices=[0, 1])
     parser.add_argument("--y_column", required=True, type=int, help="Name of the column having the target variable")
     args = parser.parse_args()

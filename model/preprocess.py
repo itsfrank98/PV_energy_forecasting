@@ -4,7 +4,7 @@ from sklearn.preprocessing import MinMaxScaler
 import argparse
 from prepare_data.split_original_dataset import prepare_data_single_dataset
 from prepare_data.multitarget_prepare import prepare_data_multitarget
-
+from utils import load_from_pickle
 
 def create_lstm_tensors(df, scaler, y_column, step=0, preprocess=True):
     """
@@ -57,13 +57,20 @@ def create_lstm_tensors(df, scaler, y_column, step=0, preprocess=True):
     return x, y_flat, scaler
 
 
-def main(args):
+"""def main(args):
     type = args.type
     dst_folder = args.dst
+    dataset = args.dataset
     os.makedirs(dst_folder, exist_ok=True)
+
     if type == "single_target":
         data_path = args.data_path
-        prepare_data_single_dataset(data_path=data_path, dst_folder=dst_folder)
+        if dataset == "fumagalli":
+            target_index = -1
+        elif dataset == "foggia":
+            target_index = 3
+            dictionary = load_from_pickle("../datasets/SS-DT_foggia_prod/dict.pkl")
+        prepare_data_single_dataset(data_path=data_path, dst_folder=dst_folder, target_index=target_index, dict=dictionary)
     else:
         path_to_dictionary = args.dict_src
         dataset_folder = args.dataset_folder
@@ -81,9 +88,9 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type=str, required=False, help="Path to the data used to create the single target dataset")
     parser.add_argument("--dict_src", type=str, required=False, help="Path to the clustering dictionary")
     parser.add_argument("--dataset_folder", type=str, required=False, help="Path to the folder containing the dataset")
-
+    parser.add_argument("--dataset", type=str, required=True, help="Dataset name", choices=["foggia", "fumagalli"])
     args = parser.parse_args()
-    main(args)
+    main(args)"""
 
 #python preprocess.py --type multi_target --dict_src ../clustering/spatial_clustering/clusters_dict_40.pkl --dataset_folder single_datasets/test --dst multitarget_40_space/test
 #python preprocess.py --type single_target --data_path ../Fumagalli\ 8fold\ CV/test_2019.arff --dst single_datasets/6months/test

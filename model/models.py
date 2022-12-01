@@ -59,7 +59,7 @@ def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, b
             monitor='val_loss', save_best_only=True, mode='min',
             filepath=model_folder + '/{}/lstm_neur{}-do{}-ep{}-bs{}-lr{}.h5'.format(id, neurons, dropout, epochs, batch_size, lr))
     ]
-    history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.002, verbose=1,
+    history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.002, verbose=0,
                         shuffle=False, callbacks=callbacks)
     return model, history
 
@@ -163,7 +163,8 @@ def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_f
         predictions = model.predict(x_test)
         avg = np.mean(y_train)
         predictions_avg = np.zeros(predictions.shape[0])+avg
-        compute_results(np.vstack(np.array(predictions)), y_test, predictions_avg, "r.txt", id)
+        predictions_avg = np.expand_dims(predictions_avg, axis=1)
+        compute_results(predictions=np.vstack(np.array(predictions)), y_test=y_test, pred_avg=predictions_avg, file_name="r.txt", id=id)
 
 
 def compute_results(predictions, y_test, pred_avg, file_name, id):
@@ -180,7 +181,7 @@ def compute_rse(pred, pred_avg, actual):
     """
     Computes the residual squared error
     """
-    sem = np.sum(pred - actual)**2
-    sea = np.sum(actual - pred_avg)**2
+    sem = np.sum((actual - pred)**2)
+    sea = np.sum((actual - pred_avg)**2)
     rse = sem / sea
     return rse

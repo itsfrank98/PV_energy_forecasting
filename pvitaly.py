@@ -1,3 +1,6 @@
+"""
+This module contains functions to process the raw pvitaly dataset
+"""
 import os
 import pandas as pd
 from tqdm import tqdm

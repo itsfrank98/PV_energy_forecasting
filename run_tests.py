@@ -57,7 +57,7 @@ def train_test_model(path_to_dictionary, technique, n, model_type):
     parser.model_folder = "model/{}_merged_{}/{}/{}_{}/models".format(dataset, technique, n, model_type, c)
     parser.neurons = 18
     parser.dropout = 0.3
-    parser.lr = 0.008
+    parser.lr = 0.005
     parser.batch_size = 200
     parser.epochs = 1
     parser.patience = 10
@@ -71,18 +71,17 @@ def train_test_model(path_to_dictionary, technique, n, model_type):
         single_target_clustering_model_main(parser)
 
 
-
 if __name__ == "__main__":
     # for model_type in ['aggregated', 'single_model_clustering']:
-    model_type = 'single_model_clustering'
-    for technique in ["modularity", "consensus", "silhouette", "mi"]:
+    model_type = 'single_model_clustering' #
+    for technique in ["consensus", "modularity",  "silhouette", "mi"]:
         for tup in [(4, 5), (5, 4), (4, 4), (5, 5)]:
             s = tup[0]
             t = tup[1]
-            #merge_clusters(s, t, technique)
-            for n in [4,5,6]:
+            merge_clusters(s, t, technique)
+            for n in [4, 5, 6]:
                 path_to_dictionary = "clustering/merged_clustering/{}/{}/{}s{}t_dict_{}.pkl".format(dataset, technique, s, t, n)
-                #spatio_temporal_clustering(s=s, t=t, technique=technique, n=n, path_to_dictionary=path_to_dictionary)
+                spatio_temporal_clustering(s=s, t=t, technique=technique, n=n, path_to_dictionary=path_to_dictionary)
                 aggregate = False
                 if model_type == 'aggregated':
                     aggregate = True
