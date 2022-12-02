@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import argparse
 from prepare_data.split_original_dataset import prepare_data_single_dataset
-from prepare_data.multitarget_prepare import prepare_data_multitarget
+from prepare_data.chain_datasets import chain
 from utils import load_from_pickle
 
 def create_lstm_tensors(df, scaler, y_column, step=0, preprocess=True):

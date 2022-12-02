@@ -4,31 +4,30 @@ import numpy as np
 import os
 from tqdm import tqdm
 import pandas as pd
-from multitarget_prepare import prepare_data_multitarget
+from chain_datasets import chain
 sys.path.append('../..')
 from utils import load_from_pickle
 def prepare_data_aggregated_train(data_path, path_to_dictionary, dst_folder, x_cols, y_cols):
     """
-    Create dataframes for another type of training: the one where we have 24 features for each plant. The first 12 are
-    the energy values for that plant, the other 12 are obtained by aggregating the features of the other plants in the
+    Create dataframes for the type of training where we have n*2 features for each plant. The first n are
+    the energy values for that plant, the other n are obtained by aggregating the features of the other plants in the
     same cluster as the one we are considering. They are aggregated by computing the mean.
     :return:
     """
 
-    prepare_data_multitarget(path_to_dictionary, data_path, dst_folder, axis=0, cols=x_cols+y_cols)
+    chain(path_to_dictionary, data_path, dst_folder, axis=0, cols=x_cols + y_cols)
     for f in tqdm(sorted(os.listdir(os.path.join(dst_folder)))):
-        if f == "18.csv":  #37
-            continue
-        d = pd.read_csv(os.path.join(dst_folder, f))
-        d = d.loc[:, d.columns != 'Unnamed: 0']
-        means = d[x_cols].mean(axis=0)
-        means = means.values
-        means = np.expand_dims(means, axis=0)
-        means = np.repeat(means, len(d), axis=0)
-        df_means = pd.DataFrame(data=means, index=None, columns=[str(i)+'m' for i in range(len(x_cols))])
-        #print(df_means)
-        definitive_df = pd.concat((df_means.loc[:, df_means.columns != 'index'], d), axis=1)
-        definitive_df.to_csv(os.path.join(dst_folder, f))
+        if os.path.exists(os.path.join(dst_folder, f)):
+            d = pd.read_csv(os.path.join(dst_folder, f))
+            d = d.loc[:, d.columns != 'Unnamed: 0']
+            means = d[x_cols].mean(axis=0)
+            means = means.values
+            means = np.expand_dims(means, axis=0)
+            means = np.repeat(means, len(d), axis=0)
+            df_means = pd.DataFrame(data=means, index=None, columns=[str(i)+'m' for i in range(len(x_cols))])
+            #print(df_means)
+            definitive_df = pd.concat((df_means.loc[:, df_means.columns != 'index'], d), axis=1)
+            definitive_df.to_csv(os.path.join(dst_folder, f))
 
 def prepare_data_aggregated_test(clustering_dict, dst_folder, train_dir, x_cols, testing_data_path):
     for f in tqdm(os.listdir(testing_data_path)):

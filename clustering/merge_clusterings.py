@@ -10,9 +10,9 @@ def point_consensus(spatial_labels, temporal_labels):
     """
     This is the naive technique. It directly computes the final matrix by following a simple procedure. Consider the points (i, j). In the final matrix,
     at the position [i, j], we will put:
-    - 2 if they were clustered together by both the clustering models
+    - 2 if neither of the two clustering models put them in the same cluster
     - 1 if they were clustered together by only one of the clustering models
-    - 0 if they were never clustered together
+    - 0 if both the models clustered them together
     :param spatial_labels: Labels that the spatial clustering model assigned to the points
     :param temporal_labels: Labels that the temporal clustering model assigned to the points
     :return:
@@ -20,11 +20,11 @@ def point_consensus(spatial_labels, temporal_labels):
     consensus_matrix = np.ones((len(spatial_labels), len(spatial_labels))) * 2      # Values on diagonal will be always equal to 2
     for i in range(len(spatial_labels)):
         for j in range(i+1, len(spatial_labels)):
-            value = 0
+            value = 2
             if (spatial_labels[i] == spatial_labels[j]) != (temporal_labels[i] == temporal_labels[j]):  # Simulation of XOR. Case in which the two points are clustered together by only one of the clustering models
                 value = 1
             elif spatial_labels[i] == spatial_labels[j] and temporal_labels[i] == temporal_labels[j]:
-                value = 2
+                value = 0
             consensus_matrix[i, j] = value
             consensus_matrix[j, i] = value
     return consensus_matrix
@@ -36,13 +36,15 @@ def compute_cluster_modularity(labels):
     keys = list(d.keys())
     for i in range(len(keys)):
         elements_in_i = d[keys[i]]
+        li = elements_in_i*(elements_in_i-1)/2
+        ki = elements_in_i*(elements_in_i-1)
         for j in range(len(keys)):
             elements_in_j = d[keys[j]]
             g = elements_in_i + elements_in_j     # Total number of elements in the two clusters
             m = g*(g-1)     # How many arcs we would have if all the elements we are considering were fully connected
             lj = elements_in_j*(elements_in_j-1)/2  # Number of arcs in the j community if they were fully connected
             kj = elements_in_j*(elements_in_j-1)    # Sum of the grades of the nodes in the j community if they were fully connected
-            modularity = (lj/m)-(kj/(2*m))**2
+            modularity = ((li/m)-(ki/(2*m))**2) + ((lj/m)-(kj/(2*m))**2)
             cluster_modularity_matrix[i, j] = modularity
     return cluster_modularity_matrix
 

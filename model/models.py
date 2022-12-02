@@ -59,7 +59,7 @@ def train_model(id, model_folder, model:keras.Model, neurons, dropout, epochs, b
             monitor='val_loss', save_best_only=True, mode='min',
             filepath=model_folder + '/{}/lstm_neur{}-do{}-ep{}-bs{}-lr{}.h5'.format(id, neurons, dropout, epochs, batch_size, lr))
     ]
-    history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.002, verbose=0,
+    history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.002, verbose=1,
                         shuffle=False, callbacks=callbacks)
     return model, history
 
@@ -122,27 +122,28 @@ def train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epoc
     x_train, y_train, scaler = create_lstm_tensors(train, scaler=None, y_column=y_column, preprocess=preprocess)
 
     model = create_single_target_model(neurons=neurons, dropout=dropout, x_train=x_train, lr=lr)
-    #model = keras.models.load_model("pvitaly/single_model/unique/lstm_neur18-do0.3-ep200-bs200-lr0.005.h5")
-    model, hist = train_model("unique", model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
-                              x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr, patience=patience)
+    model = keras.models.load_model("foggia/single_target/models/unique/lstm_neur12-do0.3-ep200-bs500-lr0.003.h5")
+    #model, hist = train_model("unique", model_folder=model_folder, model=model, epochs=epochs, batch_size=batch_size,
+    #                          x_train=x_train, y_train=y_train, neurons=neurons, dropout=dropout, lr=lr, patience=patience)
     avg = np.mean(y_train)  # Average of the target labels in the training set. It will be used to compute the relative squared error
 
+    first = True
     for f in tqdm(sorted(os.listdir(test_dir))):
-        id = f.split('.')[0]
         if f == ".csv" or f.endswith(".txt"):
             continue
         test = pd.read_csv(os.path.join(test_dir, f))
         x_test, y_test, _ = create_lstm_tensors(test, scaler=scaler, y_column=y_column, preprocess=preprocess)
-        pred = model.predict(x_test)
-        if id == "0":
+        pred = model.predict(x_test, verbose=0)
+        if first:
             predictions = pred
-            t = y_test
+            y = y_test
+            first = False
         else:
             predictions = np.vstack((predictions, pred))
-            t = np.vstack((t, y_test))
+            y = np.vstack((y, y_test))
 
     predictions_avg = np.zeros(predictions.shape[0])+avg
-    compute_results(predictions, t, predictions_avg, "r.txt", "UNIQUE")
+    compute_results(predictions, y, predictions_avg, "../r.txt", "UNIQUE")
 
 
 def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column, preprocess, patience, batch_size):
@@ -163,7 +164,6 @@ def train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_f
         predictions = model.predict(x_test)
         avg = np.mean(y_train)
         predictions_avg = np.zeros(predictions.shape[0])+avg
-        predictions_avg = np.expand_dims(predictions_avg, axis=1)
         compute_results(predictions=np.vstack(np.array(predictions)), y_test=y_test, pred_avg=predictions_avg, file_name="r.txt", id=id)
 
 
@@ -181,6 +181,7 @@ def compute_rse(pred, pred_avg, actual):
     """
     Computes the residual squared error
     """
+    pred_avg = np.expand_dims(pred_avg, axis=1)
     sem = np.sum((actual - pred)**2)
     sea = np.sum((actual - pred_avg)**2)
     rse = sem / sea
