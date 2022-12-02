@@ -6,7 +6,7 @@ from clustering.spatio_temporal_clustering import main as spatio_temporal_main
 from model.aggregated_model import main as aggregated_model_main
 from model.run_models import main as single_target_clustering_model_main
 from model.prepare_data.aggregate import main as aggregated_main
-from model.prepare_data.multitarget_prepare import main as prepare_single_target_clustering_main
+from model.prepare_data.chain_datasets import main as prepare_single_target_clustering_main
 import argparse
 
 dataset = "pvitaly"

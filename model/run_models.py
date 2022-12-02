@@ -12,8 +12,8 @@ def main(args):
     f.truncate()
     f.close()
 
-    train_dir = args.train_dir
-    test_dir = args.test_dir
+    train_data_path = args.train_data_path
+    test_data_path = args.test_data_path
     file_name = args.file_name
     neurons = args.neurons
     dropout = args.dropout
@@ -33,33 +33,33 @@ def main(args):
         prep = True
 
     if training_type == "multi_target":
-        if train_dir.__contains__("pvitaly"):
+        if train_data_path.__contains__("pvitaly"):
             step = 18
-        elif train_dir.__contains__("latiano"):
+        elif train_data_path.__contains__("latiano"):
             step = 13
     os.makedirs(model_folder, exist_ok=True)
 
     if training_type == "single_model_clustering":
-        train_single_model_clustering(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column=y_column,
+        train_single_model_clustering(train_data_path, test_data_path, neurons, dropout, model_folder, epochs, lr, y_column=y_column,
                                       preprocess=prep, patience=patience, batch_size=batch_size)
     elif training_type == "single_model":
-        train_unique_model(train_dir, test_dir, neurons, dropout, model_folder, epochs, lr, y_column=y_column,
+        train_unique_model(train_data_path, test_data_path, neurons, dropout, model_folder, epochs, lr, y_column=y_column,
                            preprocess=prep, patience=patience, batch_size=batch_size)
     elif training_type == "multi_target":
         clustering_dict = load_from_pickle(clustering_dictionary)
-        train_separate_models(train_dir=train_dir, test_dir=test_dir, model_type=training_type, neurons=neurons, dropout=dropout,
+        train_separate_models(train_dir=train_data_path, test_dir=test_data_path, model_type=training_type, neurons=neurons, dropout=dropout,
                               model_folder=model_folder, epochs=epochs, lr=lr, y_column=y_column, preprocess=prep,
                               clustering_dictionary=clustering_dict, step=step, patience=patience, batch_size=batch_size)
     elif training_type == "single_target":
-        train_separate_models(train_dir=train_dir, test_dir=test_dir, model_type=training_type, neurons=neurons, dropout=dropout,
+        train_separate_models(train_dir=train_data_path, test_dir=test_data_path, model_type=training_type, neurons=neurons, dropout=dropout,
                               model_folder=model_folder, epochs=epochs, lr=lr, preprocess=prep, y_column=y_column, patience=patience, batch_size=batch_size)
     sort_results("r.txt", file_name)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_dir", type=str, required=True, help="Path to the training directory")
-    parser.add_argument("--test_dir", type=str, required=True, help="Path to the testing directory")
+    parser.add_argument("--train_data_path", type=str, required=True, help="Path to the training directory")
+    parser.add_argument("--test_data_path", type=str, required=True, help="Path to the testing directory")
     parser.add_argument("--file_name", type=str, required=True, help="Name of the file where the results will be written")
     parser.add_argument("--neurons", type=int, required=True, help="Number of neurons")
     parser.add_argument("--dropout", type=float, required=True, help="Dropout")

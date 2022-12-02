@@ -51,7 +51,7 @@ def sort_results(unsorted_file_path, sorted_file_path):
         for line in f:
             d = line.split()
             k = d[0][:-1]
-            if k != "MA":
+            if k != "MA" and not(k.startswith("P")):
                 mae, rmse, rse = float(d[1]), float(d[2]), float(d[3])
                 s1 += mae
                 s2 += rmse
